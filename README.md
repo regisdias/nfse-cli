@@ -15,7 +15,7 @@ Dependências do núcleo: só `lxml` e `cryptography`. Nenhuma biblioteca de ter
 ## Instalação
 
 ```bash
-python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
+python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'   # '.[danfse]' para só gerar PDF
 .venv/bin/pytest            # testes offline
 ```
 
@@ -44,7 +44,8 @@ nfse emitir --producao --tomador cliente --valor 9000 --descricao-arquivo desc.t
 nfse consultar --numero 3                          # essa DPS virou nota?
 nfse consultar --serie 70000 --numero 3            # idem, para uma nota do Emissor Web
 nfse baixar <chave de acesso>                      # XML da NFS-e
-nfse danfse <chave de acesso> --tentativas 30      # PDF; o serviço do ADN cai com frequência (503)
+nfse danfse <chave de acesso>                      # PDF (DANFSe) gerado aqui a partir do XML
+nfse danfse --xml nota.xml                         # idem, de um XML salvo, sem rede
 ```
 
 O número da DPS é o último usado + 1 (guardado em `~/.config/nfse-cli/numeracao.json`, por CNPJ, ambiente e
@@ -60,6 +61,21 @@ série), e só avança depois de a nota sair. `--numero` força um número.
 
 Erros da Sefin (`E0xxx`) viram `nfse.Rejeicao` e não adianta tentar de novo; rede, timeout e 5xx viram
 `nfse.FalhaComunicacao`, que pode ser repetida, sempre consultando a DPS antes.
+
+## DANFSe (PDF)
+
+A API de DANFSe do ADN foi suspensa em 03/08/2026: pela Nota Técnica SE/CGNFS-e nº 008, o PDF passou a ser
+gerado pelo próprio software de emissão, no leiaute da NT. `nfse.gerar_danfse(xml)` faz isso (extra
+`danfse`, que traz o reportlab; o núcleo continua só com lxml e cryptography):
+
+- uma página A4, blocos e posições do item 2.4.5 da NT, QR Code para a consulta pública da nota;
+- só mostra o que está no XML (a NT proíbe acrescentar informação); campo vazio vira `-`;
+- blocos sem dados encolhem (notas 2 a 5) e a sobra vai para "Informações Complementares";
+- homologação sai com "NFS-e SEM VALIDADE JURÍDICA" em vermelho.
+
+Fontes: Helvetica (mesmas métricas da Arial pedida pela NT). Nome do município do tomador vem da tabela do IBGE
+empacotada em `danfse_recursos/municipios.csv`. Ainda não faz as marcas d'água de cancelada/substituída: o XML
+da nota não diz isso (é um evento à parte).
 
 ## Armadilhas já resolvidas
 

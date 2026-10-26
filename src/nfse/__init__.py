@@ -23,6 +23,7 @@ from .dps import (
     id_dps,
     montar_dps,
 )
+from .danfse import DanfseIndisponivel, gerar_danfse
 from .emissao import Config, DpsAssinada, Resultado, emitir, gerar_dps
 from .esquema import EsquemaInvalido, validar_dps
 from .sefin import Erro, FalhaComunicacao, Rejeicao, Sefin
@@ -32,9 +33,9 @@ __version__ = "0.1.0"
 __all__ = [
     "HOMOLOGACAO", "PRODUCAO",
     "LEIAUTES", "LEIAUTE_ANTERIOR", "LEIAUTE_NT009", "LEIAUTE_POR_AMBIENTE",
-    "AssinaturaInvalida", "CertificadoInvalido", "DadosInvalidos", "EsquemaInvalido",
+    "AssinaturaInvalida", "CertificadoInvalido", "DanfseIndisponivel", "DadosInvalidos", "EsquemaInvalido",
     "FalhaComunicacao", "Rejeicao", "Erro",
     "Certificado", "Config", "DpsAssinada", "Emissao", "Endereco", "Prestador",
     "Resultado", "Sefin", "Servico", "Tomador", "TotTrib",
-    "assinar", "emitir", "gerar_dps", "id_dps", "montar_dps", "validar_dps", "verificar",
+    "assinar", "emitir", "gerar_danfse", "gerar_dps", "id_dps", "montar_dps", "validar_dps", "verificar",
 ]

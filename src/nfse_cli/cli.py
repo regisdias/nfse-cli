@@ -13,7 +13,6 @@ import os
 import re
 import subprocess
 import sys
-import time
 import tomllib
 from dataclasses import dataclass
 from datetime import date
@@ -328,18 +327,15 @@ def cmd_baixar(aj: Ajustes, args) -> None:
 
 
 def cmd_danfse(aj: Ajustes, args) -> None:
-    sefin = nfse.Sefin(carregar_certificado(aj), _ambiente(args))
-    for tentativa in range(1, args.tentativas + 1):
-        try:
-            pdf = sefin.baixar_danfse(args.chave)
-            break
-        except nfse.FalhaComunicacao as e:
-            if tentativa == args.tentativas:
-                raise
-            print(f"tentativa {tentativa}/{args.tentativas}: {e}; de novo em {args.intervalo}s", file=sys.stderr)
-            time.sleep(args.intervalo)
-    destino = Path(args.saida or f"{args.chave}-danfse.pdf")
-    destino.write_bytes(pdf)
+    """DANFSe gerado aqui a partir do XML (a API do ADN foi suspensa em 03/08/2026, NT 008)."""
+    from nfse.danfse import gerar_danfse
+
+    if args.xml:
+        xml = Path(args.xml).read_bytes()
+    else:
+        xml = nfse.Sefin(carregar_certificado(aj), _ambiente(args)).baixar_nfse(args.chave)
+    destino = Path(args.saida or f"{args.chave or Path(args.xml).stem}-danfse.pdf")
+    destino.write_bytes(gerar_danfse(xml))
     print(f"Salvo em {destino}")
 
 
@@ -381,12 +377,12 @@ def montar_parser() -> argparse.ArgumentParser:
     ambiente(p)
     p.add_argument("chave")
     p.add_argument("--saida")
-    p = sub.add_parser("danfse", help="baixa o PDF (DANFSe) de uma NFS-e pela chave")
+    p = sub.add_parser("danfse", help="gera o PDF (DANFSe) de uma NFS-e, pela chave ou de um XML")
     ambiente(p)
-    p.add_argument("chave")
+    g = p.add_mutually_exclusive_group(required=True)
+    g.add_argument("chave", nargs="?", help="baixa o XML da Sefin e gera o PDF")
+    g.add_argument("--xml", help="gera o PDF de um XML de NFS-e já salvo (sem rede)")
     p.add_argument("--saida")
-    p.add_argument("--tentativas", type=int, default=1, help="o serviço cai com frequência (503)")
-    p.add_argument("--intervalo", type=int, default=120, help="segundos entre tentativas")
     return ap
 
 
@@ -405,7 +401,8 @@ def main(argv: list[str] | None = None) -> None:
     try:
         aj = carregar_ajustes(args.config)
         COMANDOS[args.comando](aj, args)
-    except (ErroCli, nfse.DadosInvalidos, nfse.CertificadoInvalido, nfse.EsquemaInvalido, nfse.AssinaturaInvalida) as e:
+    except (ErroCli, nfse.DadosInvalidos, nfse.CertificadoInvalido, nfse.EsquemaInvalido, nfse.AssinaturaInvalida,
+            nfse.DanfseIndisponivel) as e:
         print(f"erro: {e}", file=sys.stderr)
         raise SystemExit(1)
     except nfse.FalhaComunicacao as e:

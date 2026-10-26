@@ -23,12 +23,6 @@ URLS = {
     PRODUCAO: "https://sefin.nfse.gov.br/SefinNacional",
 }
 
-# Ambiente de Dados Nacional: serve o DANFSe (PDF) das notas já emitidas.
-URLS_ADN = {
-    HOMOLOGACAO: "https://adn.producaorestrita.nfse.gov.br",
-    PRODUCAO: "https://adn.nfse.gov.br",
-}
-
 
 @dataclass(frozen=True)
 class Erro:
@@ -146,19 +140,3 @@ class Sefin:
         if r.status >= 400 or not r.corpo.get("nfseXmlGZipB64"):
             raise Rejeicao(_erros(r.corpo), r.status, r.corpo)
         return descompactar(r.corpo["nfseXmlGZipB64"])
-
-    def baixar_danfse(self, chave: str) -> bytes:
-        """GET {ADN}/danfse/{chave}: PDF da nota. O serviço cai com frequência (503):
-        isso vira FalhaComunicacao, e vale tentar de novo mais tarde."""
-        status, bruto = self._abrir(f"{URLS_ADN[self.ambiente]}/danfse/{chave}", accept="application/pdf")
-        if status >= 500:
-            raise FalhaComunicacao(f"DANFSe indisponível: HTTP {status}", status)
-        if status >= 400:
-            try:
-                corpo = json.loads(bruto)
-            except ValueError:
-                corpo = bruto[:500].decode("utf-8", "replace")
-            raise Rejeicao(_erros(corpo) if isinstance(corpo, dict) else [], status, corpo)
-        if not bruto.startswith(b"%PDF"):
-            raise FalhaComunicacao("DANFSe: a resposta não é um PDF", status)
-        return bruto
