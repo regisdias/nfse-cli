@@ -120,8 +120,8 @@ def test_certificado_exige_terminal(pasta, monkeypatch, capsys):
 def test_buscas(capsys):
     assert nfse("servico", "consultoria", "informatica") == 0
     assert "01.06.01" in capsys.readouterr().out
-    assert nfse("municipio", "itajai") == 0
-    assert "4208203" in capsys.readouterr().out
+    assert nfse("municipio", "campinas", "sp") == 0
+    assert "3509502" in capsys.readouterr().out
     assert nfse("nbs", "nada", "parecido", "xyzzy") == 1
 
 

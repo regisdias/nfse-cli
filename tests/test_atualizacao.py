@@ -41,7 +41,7 @@ def test_desligar(pasta, monkeypatch, capsys):
 
 def test_aviso_sai_no_fim_de_qualquer_comando(pasta, monkeypatch, capsys):
     monkeypatch.setattr(atualizacao, "_ler_cache", lambda: {"verificado_em": time.time(), "ultima": "v99.0.0"})
-    cli.main(["municipio", "itajai"])
+    cli.main(["municipio", "campinas"])
     assert "Nova versão" in capsys.readouterr().err
 
 

@@ -42,7 +42,7 @@
     <text class="m" x="24" y="80"><tspan fill="#d97757">›</tspan><tspan fill="#f0f6fc"> emite a nota da Empresa Exemplo de outubro</tspan></text>
     <text class="m" x="24" y="116"><tspan fill="#3fb950">✓</tspan><tspan fill="#9da7b3"> outubro ainda sem nota</tspan></text>
     <text class="m" x="24" y="144"><tspan fill="#3fb950">✓</tspan><tspan fill="#9da7b3"> igual a setembro: R$ 9.000,00 · consultoria</tspan></text>
-    <text class="m" x="24" y="172"><tspan fill="#d29922">?</tspan><tspan fill="#9da7b3"> emitir em produção? </tspan><tspan fill="#f0f6fc">EMITIR</tspan></text>
+    <text class="m" x="24" y="172"><tspan fill="#d29922">?</tspan><tspan fill="#9da7b3"> emitir em produção? </tspan><tspan fill="#f0f6fc">sim</tspan></text>
     <text class="m" x="24" y="200"><tspan fill="#3fb950">✓</tspan><tspan fill="#f0f6fc"> NFS-e nº 7 emitida</tspan></text>
     <text class="m" x="24" y="228"><tspan fill="#3fb950">✓</tspan><tspan fill="#9da7b3"> PDF salvo em NFS-e/Empresa Exemplo/</tspan></text>
     <text class="m" x="24" y="256"><tspan fill="#3fb950">✓</tspan><tspan fill="#9da7b3"> e-mail pronto, aguardando você enviar</tspan></text>

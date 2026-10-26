@@ -2,7 +2,7 @@
 
 Formato de [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões em [SemVer](https://semver.org/lang/pt-BR/).
 
-## [Não lançado]
+## [0.2.0] - 2026-10-26
 
 ### Adicionado
 - Skill `nfse` para Claude Code, Codex e Antigravity (padrão Agent Skills), com configuração guiada e emissão

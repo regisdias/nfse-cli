@@ -65,7 +65,7 @@ def _buscar(itens: dict[str, str], termo: str, limite: int) -> list[tuple[str, s
 
 
 def buscar_municipios(termo: str, limite: int = 10) -> list[tuple[str, str, str]]:
-    """(código, nome, UF). Aceita "Itajaí", "itajai sc" ou o código."""
+    """(código, nome, UF). Aceita "Campinas", "campinas sp" ou o código."""
     palavras = _normal(termo).split()
     uf = palavras[-1].upper() if len(palavras) > 1 and len(palavras[-1]) == 2 else None
     nome = " ".join(palavras[:-1] if uf else palavras)

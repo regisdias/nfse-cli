@@ -203,7 +203,7 @@ nfse configurar salvar rascunho.json               # valida o rascunho e grava a
 nfse configurar mostrar                            # a configuração atual, em português
 nfse servico consultoria informática               # procura o código de tributação nacional
 nfse nbs assessoria empresarial                    # procura o código NBS
-nfse municipio itajai sc                           # procura o código IBGE do município
+nfse municipio campinas sp                         # procura o código IBGE do município
 nfse skill instalar                                # copia a skill para os agentes instalados
 
 nfse certificado                                   # titular, CNPJ e validade do certificado
