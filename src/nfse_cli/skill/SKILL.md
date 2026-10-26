@@ -26,6 +26,9 @@ acontecer antes de acontecer e, na dúvida, pergunte.
 6. **E-mail: só prepara, nunca envia.** E rode `nfse email` uma vez por nota (no Outlook, cada execução cria
    outro rascunho).
 7. **Não cole XML, senha nem dados de clientes em lugares públicos** (issues, gists, buscas na web).
+8. **Versão nova.** Se a saída de qualquer comando terminar com "Nova versão do nfse-cli", avise a pessoa e
+   ofereça `nfse atualizar` (atualiza o comando e esta skill). Antes de emitir em produção, recomende atualizar
+   primeiro: versões novas costumam trazer mudança de leiaute exigida pela Receita.
 
 Se `nfse` não existir no terminal, a instalação não foi feita: aponte para
 <https://github.com/regisdias/nfse-cli#instalação>.
@@ -121,8 +124,21 @@ E uma vez, no topo do rascunho, o padrão de todos:
 "entrega": {"pasta": "~/Documents/NFS-e", "assinatura": "Nome de quem assina", "email": "outlook"}
 ```
 
-- `email`: `outlook` (abre o rascunho no Outlook do Mac), `eml` (arquivo de e-mail para abrir em qualquer
-  programa) ou `nenhum`.
+- `email`: o programa de e-mail. **Pergunte qual a pessoa usa**; não confie no padrão do sistema (muita gente
+  usa Outlook ou Gmail com o Mail da Apple como padrão sem saber). `nfse programas-de-email` mostra o que está
+  instalado. Opções:
+
+  | `email` | Para quem usa | Anexo |
+  |---|---|---|
+  | `outlook` | Outlook no Mac | vai junto |
+  | `mail` | Mail da Apple | vai junto |
+  | `thunderbird` | Thunderbird (qualquer sistema) | vai junto |
+  | `gmail` | Gmail no navegador | a pessoa arrasta o PDF (a pasta abre junto) |
+  | `outlook-web` | Outlook na web / Microsoft 365 | a pessoa arrasta o PDF (a pasta abre junto) |
+  | `eml` | Outro programa, ou Windows sem Thunderbird | vai junto; a pessoa abre o arquivo |
+  | `nenhum` | Não quer e-mail | |
+
+  Nenhum webmail aceita anexo vindo de fora; diga isso para quem escolher `gmail` ou `outlook-web`.
 - Campos que os textos aceitam: `{numero}`, `{valor}`, `{mes}` (Outubro), `{mes_min}` (outubro), `{mes_num}`,
   `{ano}`, `{cliente}`, `{prestador}`, `{saudacao}`, `{assinatura}`, `{anexos}`.
 - Também dá para mudar o `nome_arquivo` (padrão `NFS-e {numero} - {cliente} - {mes} de {ano}`), o `corpo` do
@@ -144,6 +160,17 @@ nfse emitir --tomador <apelido>
 
 Saiu número e chave: configuração pronta. Rejeição: mostre o código e a mensagem da Sefin e corrija com a
 pessoa antes de qualquer nota em produção.
+
+**Teste do e-mail** (se já existe nota de produção, como no Caminho A): ofereça abrir um rascunho de teste
+endereçado à própria pessoa, para ela ver se o programa certo abriu, com o PDF:
+
+```bash
+nfse arquivar <chave da nota modelo>
+nfse email <chave da nota modelo> --para <e-mail da pessoa>
+```
+
+Peça para ela conferir e apagar o rascunho de teste. Não abriu ou abriu o programa errado: troque o `email` e
+teste de novo. No Caminho B, o teste fica para a primeira nota de verdade.
 
 ## Emitir a nota do mês
 

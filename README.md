@@ -99,8 +99,12 @@ flowchart LR
   mudarem em relação ao mês anterior, a skill para e pergunta.
 - **Se a conexão cair no meio,** ela consulta a Receita antes de tentar de novo, para não emitir a mesma nota
   duas vezes.
-- **O e-mail fica como rascunho, e quem envia é você.** No Mac com Outlook, a skill abre o rascunho pronto, com
-  o PDF anexado. Nos outros casos, deixa um arquivo `.eml` ou só os arquivos na pasta.
+- **O e-mail fica como rascunho, e quem envia é você.** A skill pergunta qual programa você usa e abre o rascunho
+  nele, com o PDF anexado: Outlook ou Mail no Mac, Thunderbird em qualquer sistema, ou um arquivo `.eml`. No
+  Gmail e no Outlook web, a mensagem abre preenchida no navegador e a pasta do PDF abre ao lado, para você
+  arrastar (nenhum webmail aceita anexo vindo de fora).
+- **Avisa quando há versão nova.** A Receita muda o leiaute de tempos em tempos; `nfse atualizar` atualiza o
+  comando e a skill de uma vez.
 
 ## Funciona com quais agentes
 
@@ -139,7 +143,7 @@ instalador faz ([leia o script](install.sh)):
 
 Pré-requisitos: Python 3.11 ou mais novo e o certificado A1 (`.pfx`) da empresa.
 
-Para atualizar, rode o mesmo comando. Para desinstalar:
+Para atualizar, `nfse atualizar` (a linha de comando avisa quando sai versão nova). Para desinstalar:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/regisdias/nfse-cli/main/install.sh | bash -s -- --desinstalar
@@ -185,7 +189,8 @@ O certificado A1 assina notas em nome da empresa, e o projeto é construído em 
 - **Homologação é o padrão.** Produção exige pedido explícito e confirmação: digitada no terminal, ou o código
   do resumo que você aprovou (na Lambda, liberação na própria função).
 - **O agente nunca vê a senha.** `nfse configurar certificado` só roda num terminal interativo, onde você digita.
-- **Só conversa com a Receita.** As conexões são apenas com os servidores da Sefin Nacional.
+- **Só conversa com a Receita**, e com o GitHub para saber se há versão nova: uma consulta por dia, sem nenhum
+  dado seu, só na linha de comando. Desliga com `nfse atualizar --sem-aviso`.
 
 Achou uma falha? Veja [SECURITY.md](SECURITY.md).
 
@@ -209,7 +214,10 @@ nfse dps --producao --tomador cliente              # resumo com código de confi
 nfse emitir --producao --tomador cliente --confirmacao A1B2C3   # emite só se nada mudou desde o resumo
 nfse notas --tomador cliente                       # notas já emitidas; diz se o mês já tem nota
 nfse arquivar <chave de acesso>                    # XML e PDF na pasta do cliente
-nfse email <chave de acesso>                       # rascunho do e-mail com o PDF (Outlook no Mac, ou .eml)
+nfse email <chave de acesso>                       # rascunho do e-mail com o PDF, no seu programa de e-mail
+nfse email <chave de acesso> --para eu@empresa.com # teste: rascunho para você mesmo
+nfse programas-de-email                            # programas de e-mail desta máquina
+nfse atualizar                                     # atualiza o nfse e a skill (avisa quando há versão nova)
 nfse consultar --numero 3                          # essa DPS virou nota?
 nfse consultar --serie 70000 --numero 3            # idem, para uma nota do Emissor Web
 nfse baixar <chave de acesso>                      # XML da nota

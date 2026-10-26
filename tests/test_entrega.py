@@ -73,7 +73,7 @@ def nota(aj, cert, emissao, tomador):
 
 class Args:
     def __init__(self, **kw):
-        self.__dict__.update({"tomador": None, "modo": None, "mes": None, "json": False}, **kw)
+        self.__dict__.update({"tomador": None, "modo": None, "mes": None, "json": False, "para": None}, **kw)
 
 
 def test_arquivar_e_email(aj, nota, tmp_path):

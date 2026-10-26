@@ -414,10 +414,10 @@ def montar_parser() -> argparse.ArgumentParser:
     g.add_argument("--xml", help="gera o PDF de um XML de NFS-e já salvo (sem rede)")
     p.add_argument("--saida")
 
-    from . import configurar, entrega  # aqui dentro: os dois importam este módulo
+    from . import atualizacao, configurar, entrega  # aqui dentro: os três importam este módulo
 
     COMANDOS.update(entrega.registrar(sub))
-    ap.sem_config = configurar.registrar(sub)
+    ap.sem_config = {**configurar.registrar(sub), **atualizacao.registrar(sub)}
     return ap
 
 
@@ -434,6 +434,17 @@ COMANDOS = {
 def main(argv: list[str] | None = None) -> None:
     parser = montar_parser()
     args = parser.parse_args(argv)
+    try:
+        _executar(parser, args)
+    finally:
+        if args.comando not in ("atualizar", "skill"):
+            from .atualizacao import aviso
+
+            if texto := aviso():
+                print(f"\n{texto}", file=sys.stderr)
+
+
+def _executar(parser, args) -> None:
     try:
         if args.comando in parser.sem_config:
             parser.sem_config[args.comando](args)

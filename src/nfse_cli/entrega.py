@@ -24,15 +24,8 @@ Campos dos modelos: {numero} {valor} {mes} {mes_min} {mes_num} {ano} {cliente} {
 from __future__ import annotations
 
 import json
-import platform
-import shutil
-import subprocess
-import sys
 from datetime import date
 from decimal import Decimal
-from email.message import EmailMessage
-from email.utils import formatdate
-from html import escape
 from pathlib import Path
 
 import nfse
@@ -40,6 +33,7 @@ from lxml import etree
 from nfse import PRODUCAO
 from nfse.dps import NS
 
+from . import correio
 from .cli import Ajustes, ErroCli, campos_do_mes, carregar_certificado
 
 SERIE_EMISSOR_WEB = "70000"
@@ -190,42 +184,8 @@ def cmd_arquivar(aj: Ajustes, args) -> None:
     _gravar(base.with_suffix(".pdf"), nfse.gerar_danfse(xml))
 
 
-# Valores entram por argv: nada do e-mail é interpolado no código AppleScript.
-APPLESCRIPT_OUTLOOK = """
-on run argv
-	set {para, cc, assunto, corpo} to items 1 thru 4 of argv
-	tell application "Microsoft Outlook"
-		set msg to make new outgoing message with properties {subject:assunto, content:corpo}
-		repeat with endereco in my separar(para)
-			make new to recipient at msg with properties {email address:{address:endereco}}
-		end repeat
-		repeat with endereco in my separar(cc)
-			make new cc recipient at msg with properties {email address:{address:endereco}}
-		end repeat
-		repeat with i from 5 to count of argv
-			make new attachment at msg with properties {file:(POSIX file (item i of argv))}
-		end repeat
-		open msg
-	end tell
-end run
-
-on separar(texto)
-	if texto is "" then return {}
-	set AppleScript's text item delimiters to ","
-	set itens to text items of texto
-	set AppleScript's text item delimiters to ""
-	return itens
-end separar
-"""
-
-
 def _enderecos(texto: str | None) -> str:
     return ",".join(e.strip() for e in (texto or "").split(",") if e.strip())
-
-
-def _modo_padrao() -> str:
-    tem_outlook = platform.system() == "Darwin" and Path("/Applications/Microsoft Outlook.app").exists()
-    return "outlook" if tem_outlook else "eml"
 
 
 def cmd_email(aj: Ajustes, args) -> None:
@@ -240,41 +200,21 @@ def cmd_email(aj: Ajustes, args) -> None:
     anexos = [pdf]
     if ent.get("anexar_xml"):
         anexos.append(base.with_suffix(".xml"))
-    para = _enderecos(ent.get("para"))
+    # --para: teste mandando para si mesmo (sem cópia para ninguém).
+    para = _enderecos(args.para or ent.get("para"))
     if not para:
         raise ErroCli(f"falta o destinatário: `para` em [tomadores.{apelido or '<apelido>'}.entrega]")
-    cc = _enderecos(ent.get("cc"))
-    assunto = ent.get("assunto", ASSUNTO_PADRAO).format(**campos)
-    corpo = ent.get("corpo", CORPO_PADRAO).format(**campos).strip() + "\n"
-    modo = args.modo or ent.get("email") or _modo_padrao()
-
-    if modo == "nenhum":
-        print("E-mail desligado para este cliente (email = \"nenhum\").")
-        return
-    if modo == "outlook":
-        if not shutil.which("osascript"):
-            raise ErroCli("rascunho no Outlook só funciona no macOS; use --modo eml")
-        html = escape(corpo).replace("\n", "<br>")
-        r = subprocess.run(["osascript", "-", para, cc, assunto, html, *map(str, anexos)],
-                           input=APPLESCRIPT_OUTLOOK, text=True, capture_output=True)
-        if r.returncode:
-            raise ErroCli(f"o Outlook recusou o rascunho: {r.stderr.strip()}\nAlternativa: --modo eml")
-        print(f"Rascunho aberto no Outlook (rode uma vez só: cada execução cria outro).\n"
-              f"Para: {para}\nAssunto: {assunto}\nAnexos: {', '.join(a.name for a in anexos)}")
-        return
-    if modo != "eml":
-        raise ErroCli(f"modo de e-mail desconhecido: {modo} (outlook, eml ou nenhum)")
-    msg = EmailMessage()
-    msg["To"], msg["Subject"], msg["Date"] = para, assunto, formatdate(localtime=True)
-    if cc:
-        msg["Cc"] = cc
-    msg["X-Unsent"] = "1"  # o Outlook clássico e o Thunderbird abrem como rascunho
-    msg.set_content(corpo)
-    for a in anexos:
-        msg.add_attachment(a.read_bytes(), maintype="application", subtype=a.suffix[1:], filename=a.name)
-    destino = base.with_suffix(".eml")
-    destino.write_bytes(bytes(msg))
-    print(f"E-mail pronto em {destino}\nPara: {para}\nAssunto: {assunto}\nAnexos: {', '.join(a.name for a in anexos)}")
+    rascunho = correio.Rascunho(
+        para=para,
+        cc="" if args.para else _enderecos(ent.get("cc")),
+        assunto=ent.get("assunto", ASSUNTO_PADRAO).format(**campos),
+        corpo=ent.get("corpo", CORPO_PADRAO).format(**campos).strip() + "\n",
+        anexos=anexos,
+        eml=base.with_suffix(".eml"),
+    )
+    modo = args.modo or ent.get("email") or correio.modo_padrao()
+    print(correio.abrir(modo, rascunho))
+    print(f"Para: {rascunho.para}" + (f" (cópia: {rascunho.cc})" if rascunho.cc else "") + f"\nAssunto: {rascunho.assunto}")
 
 
 def registrar(sub) -> dict:
@@ -286,8 +226,9 @@ def registrar(sub) -> dict:
     p = sub.add_parser("arquivar", help="grava o XML e o PDF da nota na pasta do cliente")
     p.add_argument("chave")
     p.add_argument("--tomador", help="apelido do cliente (padrão: o da nota)")
-    p = sub.add_parser("email", help="prepara o e-mail da nota com o PDF (rascunho no Outlook ou .eml)")
+    p = sub.add_parser("email", help="prepara o e-mail da nota com o PDF, no programa de e-mail configurado")
     p.add_argument("chave")
     p.add_argument("--tomador", help="apelido do cliente (padrão: o da nota)")
-    p.add_argument("--modo", choices=["outlook", "eml", "nenhum"])
+    p.add_argument("--modo", choices=list(correio.MODOS), help="sobrescreve o `email` da configuração")
+    p.add_argument("--para", help="teste: manda o rascunho para este endereço, sem cópia")
     return {"notas": cmd_notas, "arquivar": cmd_arquivar, "email": cmd_email}

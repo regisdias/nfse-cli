@@ -79,7 +79,7 @@ E, no topo do rascunho, o padrão de todos os clientes:
 | `entrega.pasta` (topo) | `~/Documents/NFS-e` | Pasta raiz dos arquivos |
 | `entrega.pasta` (cliente) | o apelido | Subpasta do cliente |
 | `nome_arquivo` | `NFS-e {numero} - {cliente} - {mes} de {ano}` | Nome do XML, do PDF e do `.eml` |
-| `email` | `outlook` no Mac com Outlook, senão `eml` | `outlook`, `eml` ou `nenhum` |
+| `email` | o programa padrão do sistema, se anexar; senão `eml` | `outlook`, `mail`, `thunderbird`, `gmail`, `outlook-web`, `eml` ou `nenhum` (`nfse programas-de-email` lista os desta máquina) |
 | `para`, `cc` | | Destinatários, separados por vírgula |
 | `assunto` | `NFS-e nº {numero} - {mes_min}/{ano} - {prestador}` | |
 | `saudacao`, `assinatura`, `corpo` | | Texto do e-mail |

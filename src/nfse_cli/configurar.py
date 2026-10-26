@@ -30,7 +30,7 @@ from nfse import HOMOLOGACAO, LEIAUTES, PRODUCAO, Certificado, Emissao, tabelas
 from nfse.danfse import OP_SIMP_NAC, REG_AP_TRIB_SN, REG_ESP_TRIB, TP_RET_ISSQN, TRIB_ISSQN, _cep, _dinheiro, _doc
 from nfse.modelo import Modelo, chave_valida, chaves_no_pdf, cnpj_da_chave, ler_nfse
 
-from . import cli
+from . import cli, correio
 from .cli import SERVICO_KEYCHAIN, ErroCli
 
 
@@ -425,6 +425,7 @@ def registrar(sub) -> dict:
                         ("nbs", "procura o código NBS")]:
         p = sub.add_parser(nome, help=ajuda)
         p.add_argument("termo", nargs="+")
+    sub.add_parser("programas-de-email", help="lista os programas de e-mail desta máquina e o padrão do sistema")
     p = sub.add_parser("skill", help="instala ou remove a skill nos agentes (Claude Code, Codex, Antigravity)")
     p.add_argument("acao", choices=["instalar", "remover"])
     p.add_argument("--todos", action="store_true", help="instala também em agente que não parece instalado")
@@ -435,6 +436,7 @@ def registrar(sub) -> dict:
         "servico": cmd_servico,
         "nbs": cmd_nbs,
         "skill": cmd_skill,
+        "programas-de-email": lambda args: correio.cmd_programas(args),
     }
 
 

@@ -36,6 +36,11 @@ def gerar_pfx(cnpj: str = CNPJ, inicio: datetime | None = None, dias: int = 365)
     return pkcs12.serialize_key_and_certificates(b"teste", chave, cert, None, BestAvailableEncryption(SENHA.encode()))
 
 
+@pytest.fixture(autouse=True)
+def sem_aviso_de_atualizacao(monkeypatch):
+    monkeypatch.setenv("NFSE_SEM_AVISO_ATUALIZACAO", "1")
+
+
 @pytest.fixture(scope="session")
 def pfx() -> bytes:
     return gerar_pfx()

@@ -11,6 +11,10 @@ Formato de [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões
 - `nfse notas`, `nfse arquivar` e `nfse email`: notas já emitidas, XML e PDF na pasta do cliente, rascunho do
   e-mail (Outlook no Mac ou `.eml`).
 - Valor e descrição recorrentes por cliente (`[tomadores.<apelido>.recorrente]`), com `{mes}` e `{ano}`.
+- E-mail no programa que a pessoa usa: Outlook e Mail (Mac), Thunderbird, Gmail e Outlook na web (mensagem
+  preenchida e a pasta do PDF aberta), `.eml`; `nfse programas-de-email`; `nfse email --para` para testar.
+- Aviso de versão nova (uma consulta por dia ao GitHub, desligável) e `nfse atualizar`, que atualiza o comando e
+  a skill.
 - Código de confirmação para produção: `nfse dps --producao` mostra, `nfse emitir --confirmacao` exige.
 - `nfse configurar`: certificado (senha direto no Keychain), nota modelo pelo XML, PDF ou chave de acesso, e
   salvar com validação nos esquemas oficiais. Recusa o que ainda não sabe emitir.

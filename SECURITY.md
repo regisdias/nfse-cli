@@ -17,7 +17,8 @@ certificado autoassinado que os testes geram (`tests/conftest.py`).
 
 | | O quê | Onde |
 |---|---|---|
-| Rede | Só os servidores da Sefin Nacional (`sefin.nfse.gov.br` e `sefin.producaorestrita.nfse.gov.br`), por TLS com o certificado do cliente | `src/nfse/sefin.py` |
+| Rede | Os servidores da Sefin Nacional (`sefin.nfse.gov.br` e `sefin.producaorestrita.nfse.gov.br`), por TLS com o certificado do cliente | `src/nfse/sefin.py` |
+| Rede (aviso de versão) | Só a linha de comando: um GET sem autenticação em `api.github.com` (última versão publicada), no máximo uma vez por dia, sem nenhum dado seu. Desliga com `nfse atualizar --sem-aviso` ou `NFSE_SEM_AVISO_ATUALIZACAO=1`. A biblioteca e a Lambda nunca fazem | `src/nfse_cli/atualizacao.py` |
 | Certificado | Lido de bytes; a chave privada fica em memória e passa pelo disco só cifrada, por instantes, para o TLS | `src/nfse/certificado.py` |
 | Senha | Keychain do macOS, variável `NFSE_CERT_SENHA` ou digitada; na Lambda, Secrets Manager. Nunca em arquivo | `src/nfse_cli/cli.py`, `src/nfse_lambda/handler.py` |
 | Disco | Configuração, numeração e XML das notas em `~/.config/nfse-cli/` (CLI); nada na biblioteca nem na Lambda | `src/nfse_cli/cli.py` |
