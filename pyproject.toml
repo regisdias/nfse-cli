@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nfse-cli"
+version = "0.1.0"
+description = "Emissão de NFS-e pela API da Sefin Nacional: biblioteca sem estado + linha de comando"
+readme = "README.md"
+requires-python = ">=3.11"
+# Núcleo propositalmente enxuto: nenhuma biblioteca de terceiros específica de NFS-e.
+dependencies = [
+    "lxml>=5",
+    "cryptography>=42",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+nfse = "nfse_cli.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+nfse = ["esquemas/*.xsd"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["homologacao: envia para a Sefin de homologação (rodar só manualmente, com -m homologacao)"]
+addopts = "-m 'not homologacao'"

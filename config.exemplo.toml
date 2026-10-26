@@ -1,0 +1,41 @@
+# Copie para ~/.config/nfse-cli/config.toml e ajuste.
+# Caminhos relativos são relativos à pasta deste arquivo.
+# A senha do certificado NÃO fica aqui: Keychain do macOS ou NFSE_CERT_SENHA.
+
+serie = "1"              # aplicativo próprio usa 1 a 49999 (o Emissor Web usa 70000+)
+pasta_notas = "notas"    # onde ficam os XML emitidos, separados por ambiente
+
+[certificado]
+arquivo = "certificado.pfx"
+
+[prestador]
+cnpj = "11222333000181"
+cod_municipio = "3550308"   # IBGE (São Paulo)
+op_simp_nac = 3             # 1 não optante, 2 MEI, 3 ME/EPP
+reg_ap_trib_sn = 1          # só ME/EPP: 1 = federais e municipal pelo Simples
+reg_esp_trib = 0
+fone = "11999999999"
+# im = "..."               # só se a inscrição estiver no cadastro nacional (CNC)
+
+[servico]
+c_trib_nac = "170101"       # 17.01.01 assessoria ou consultoria
+c_nbs = "114013900"
+# cod_municipio_prestacao = "3550308"   # padrão: município do prestador
+trib_issqn = 1              # operação tributável
+tp_ret_issqn = 1            # não retido
+# p_aliq = 2.00             # ME/EPP no Simples sem retenção NÃO informa
+
+[servico.tot_trib]
+modo = "sn"                 # sn | percentual | valor | nao_informado
+percentual = 6.00           # alíquota efetiva do Simples (confirme com a contabilidade)
+
+[tomadores.cliente]
+documento = "11444777000161"
+nome = "CLIENTE EXEMPLO LTDA"
+email = "fiscal@cliente.com.br"
+# [tomadores.cliente.endereco]
+# cod_municipio = "3550308"
+# cep = "01001000"
+# logradouro = "Rua Exemplo"
+# numero = "100"
+# bairro = "Centro"

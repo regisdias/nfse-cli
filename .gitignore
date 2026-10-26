@@ -1,0 +1,17 @@
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/
+build/
+dist/
+
+# Nunca versionar certificado, senha, configuração local ou notas emitidas
+*.pfx
+*.p12
+*.pem
+.env
+config.toml
+notas/
+*-nfse.xml
+*-dps.xml
+DPS*.xml
