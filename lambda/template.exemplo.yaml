@@ -1,0 +1,42 @@
+# Exemplo de função no template SAM de um projeto. Ajuste nomes, região e chave KMS; o zip vem de
+# `python lambda/empacotar.py` (com --danfse se a função também gerar PDF).
+#
+# O certificado entra no Secrets Manager uma vez por CNPJ, cifrado com a chave KMS do projeto:
+#   aws secretsmanager create-secret --name nfse/certificado/<CNPJ> --kms-key-id <chave> \
+#     --secret-string file://segredo.json        # {"pfx": "<base64 do .pfx>", "senha": "..."}; apague o arquivo depois
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  ChaveKmsArn:
+    Type: String
+  ProducaoLiberada:
+    Type: String
+    AllowedValues: ["0", "1"]
+    Default: "0"   # homologação até alguém mudar de propósito
+
+Resources:
+  EmitirNfse:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../nfse-cli/dist/nfse-lambda-arm64-py3.13.zip
+      Handler: nfse_lambda.handler.handler
+      Runtime: python3.13
+      Architectures: [arm64]
+      MemorySize: 512
+      Timeout: 150   # consulta da DPS + envio, até 60 s cada na Sefin
+      Environment:
+        Variables:
+          NFSE_SEGREDO_CERTIFICADO: "nfse/certificado/{cnpj}"
+          NFSE_PRODUCAO_LIBERADA: !Ref ProducaoLiberada
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:nfse/certificado/*
+            - Effect: Allow
+              Action: kms:Decrypt
+              Resource: !Ref ChaveKmsArn
+              Condition:
+                StringEquals:
+                  kms:ViaService: !Sub secretsmanager.${AWS::Region}.amazonaws.com

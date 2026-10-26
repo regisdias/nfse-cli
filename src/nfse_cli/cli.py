@@ -26,11 +26,9 @@ from nfse import (
     Certificado,
     Config,
     Emissao,
-    Endereco,
-    Prestador,
-    Servico,
     Tomador,
-    TotTrib,
+    config_de_dict,
+    tomador_de_dict,
 )
 
 PASTA_CONFIG = Path(os.environ.get("NFSE_HOME", Path.home() / ".config" / "nfse-cli"))
@@ -53,63 +51,23 @@ class Ajustes:
     tomadores: dict[str, Tomador]
 
 
-def _tot_trib(dados: dict) -> TotTrib:
-    modo = dados.get("modo", "sn")
-    if modo == "sn":
-        return TotTrib.sn(str(dados["percentual"]))
-    if modo in ("percentual", "valor"):
-        valores = [str(dados[k]) for k in ("federal", "estadual", "municipal")]
-        return TotTrib.percentual(*valores) if modo == "percentual" else TotTrib.valor(*valores)
-    if modo == "nao_informado":
-        return TotTrib.nao_informado()
-    raise ErroCli(f"tot_trib.modo desconhecido: {modo}")
-
-
-def _tomador(dados: dict) -> Tomador:
-    end = dados.get("endereco")
-    return Tomador(
-        documento=str(dados["documento"]),
-        nome=dados["nome"],
-        email=dados.get("email"),
-        fone=dados.get("fone"),
-        im=dados.get("im"),
-        endereco=Endereco(**end) if end else None,
-    )
-
-
 def carregar_ajustes(caminho: Path) -> Ajustes:
     if not caminho.exists():
         raise ErroCli(f"configuração não encontrada: {caminho} (copie config.exemplo.toml)")
     with caminho.open("rb") as f:
         d = tomllib.load(f)
-    p, s = d["prestador"], d["servico"]
-    prestador = Prestador(
-        cnpj=str(p["cnpj"]),
-        cod_municipio=str(p["cod_municipio"]),
-        op_simp_nac=int(p["op_simp_nac"]),
-        reg_esp_trib=int(p.get("reg_esp_trib", 0)),
-        reg_ap_trib_sn=p.get("reg_ap_trib_sn"),
-        im=p.get("im"),
-        fone=p.get("fone"),
-        email=p.get("email"),
-    )
-    servico = Servico(
-        c_trib_nac=str(s["c_trib_nac"]),
-        cod_municipio_prestacao=str(s.get("cod_municipio_prestacao", prestador.cod_municipio)),
-        tot_trib=_tot_trib(s.get("tot_trib", {})),
-        c_nbs=s.get("c_nbs"),
-        c_trib_mun=s.get("c_trib_mun"),
-        trib_issqn=int(s.get("trib_issqn", 1)),
-        tp_ret_issqn=int(s.get("tp_ret_issqn", 1)),
-        p_aliq=Decimal(str(s["p_aliq"])) if "p_aliq" in s else None,
-    )
+    try:
+        cfg = config_de_dict(d)
+        tomadores = {k: tomador_de_dict(v) for k, v in d.get("tomadores", {}).items()}
+    except nfse.DadosInvalidos as e:
+        raise ErroCli(f"{caminho}: {e}") from e
     base = caminho.parent
     return Ajustes(
-        cfg=Config(prestador, servico),
+        cfg=cfg,
         arquivo_certificado=(base / Path(d["certificado"]["arquivo"]).expanduser()),
         pasta_notas=(base / Path(d.get("pasta_notas", "notas")).expanduser()),
         serie=str(d.get("serie", "1")),
-        tomadores={k: _tomador(v) for k, v in d.get("tomadores", {}).items()},
+        tomadores=tomadores,
     )
 
 

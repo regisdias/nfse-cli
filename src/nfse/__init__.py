@@ -23,6 +23,7 @@ from .dps import (
     id_dps,
     montar_dps,
 )
+from .configuracao import config_de_dict, tomador_de_dict
 from .danfse import DanfseIndisponivel, gerar_danfse
 from .emissao import Config, DpsAssinada, Resultado, emitir, gerar_dps
 from .esquema import EsquemaInvalido, validar_dps
@@ -37,5 +38,5 @@ __all__ = [
     "FalhaComunicacao", "Rejeicao", "Erro",
     "Certificado", "Config", "DpsAssinada", "Emissao", "Endereco", "Prestador",
     "Resultado", "Sefin", "Servico", "Tomador", "TotTrib",
-    "assinar", "emitir", "gerar_danfse", "gerar_dps", "id_dps", "montar_dps", "validar_dps", "verificar",
+    "assinar", "config_de_dict", "emitir", "gerar_danfse", "gerar_dps", "id_dps", "montar_dps", "tomador_de_dict", "validar_dps", "verificar",
 ]
