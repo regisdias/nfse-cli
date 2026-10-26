@@ -23,6 +23,12 @@ URLS = {
     PRODUCAO: "https://sefin.nfse.gov.br/SefinNacional",
 }
 
+# Ambiente de Dados Nacional: serve o DANFSe (PDF) das notas já emitidas.
+URLS_ADN = {
+    HOMOLOGACAO: "https://adn.producaorestrita.nfse.gov.br",
+    PRODUCAO: "https://adn.nfse.gov.br",
+}
+
 
 @dataclass(frozen=True)
 class Erro:
@@ -90,21 +96,24 @@ class Sefin:
         self.timeout = timeout
         self._ctx = cert.contexto_tls()
 
-    def _requisicao(self, metodo: str, caminho: str, corpo: dict | None = None) -> Resposta:
-        dados = json.dumps(corpo).encode() if corpo is not None else None
+    def _abrir(self, url: str, metodo: str = "GET", dados: bytes | None = None, accept: str = "application/json") -> tuple[int, bytes]:
         req = urllib.request.Request(
-            self.base + caminho,
+            url,
             data=dados,
             method=metodo,
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            headers={"Content-Type": "application/json", "Accept": accept},
         )
         try:
             with urllib.request.urlopen(req, context=self._ctx, timeout=self.timeout) as r:
-                status, bruto = r.status, r.read()
+                return r.status, r.read()
         except urllib.error.HTTPError as e:
-            status, bruto = e.code, e.read()
+            return e.code, e.read()
         except (urllib.error.URLError, TimeoutError, OSError) as e:
-            raise FalhaComunicacao(f"{metodo} {caminho}: {e}") from e
+            raise FalhaComunicacao(f"{metodo} {url}: {e}") from e
+
+    def _requisicao(self, metodo: str, caminho: str, corpo: dict | None = None) -> Resposta:
+        dados = json.dumps(corpo).encode() if corpo is not None else None
+        status, bruto = self._abrir(self.base + caminho, metodo, dados)
 
         try:
             json_corpo = json.loads(bruto) if bruto.strip() else {}
@@ -137,3 +146,19 @@ class Sefin:
         if r.status >= 400 or not r.corpo.get("nfseXmlGZipB64"):
             raise Rejeicao(_erros(r.corpo), r.status, r.corpo)
         return descompactar(r.corpo["nfseXmlGZipB64"])
+
+    def baixar_danfse(self, chave: str) -> bytes:
+        """GET {ADN}/danfse/{chave}: PDF da nota. O serviço cai com frequência (503):
+        isso vira FalhaComunicacao, e vale tentar de novo mais tarde."""
+        status, bruto = self._abrir(f"{URLS_ADN[self.ambiente]}/danfse/{chave}", accept="application/pdf")
+        if status >= 500:
+            raise FalhaComunicacao(f"DANFSe indisponível: HTTP {status}", status)
+        if status >= 400:
+            try:
+                corpo = json.loads(bruto)
+            except ValueError:
+                corpo = bruto[:500].decode("utf-8", "replace")
+            raise Rejeicao(_erros(corpo) if isinstance(corpo, dict) else [], status, corpo)
+        if not bruto.startswith(b"%PDF"):
+            raise FalhaComunicacao("DANFSe: a resposta não é um PDF", status)
+        return bruto

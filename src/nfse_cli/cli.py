@@ -13,6 +13,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 import tomllib
 from dataclasses import dataclass
 from datetime import date
@@ -312,7 +313,8 @@ def cmd_emitir(aj: Ajustes, args) -> None:
 def cmd_consultar(aj: Ajustes, args) -> None:
     cert = carregar_certificado(aj)
     ambiente = _ambiente(args)
-    id_dps = args.id or nfse.id_dps(aj.cfg.prestador.cod_municipio, aj.cfg.prestador.cnpj, aj.serie, args.numero)
+    serie = args.serie or aj.serie
+    id_dps = args.id or nfse.id_dps(aj.cfg.prestador.cod_municipio, aj.cfg.prestador.cnpj, serie, args.numero)
     chave = nfse.Sefin(cert, ambiente).consultar_dps(id_dps)
     print(f"{id_dps}: " + (f"virou a NFS-e {chave}" if chave else "não gerou nota"))
 
@@ -322,6 +324,22 @@ def cmd_baixar(aj: Ajustes, args) -> None:
     xml = nfse.Sefin(cert, _ambiente(args)).baixar_nfse(args.chave)
     destino = Path(args.saida or f"{args.chave}-nfse.xml")
     destino.write_bytes(xml)
+    print(f"Salvo em {destino}")
+
+
+def cmd_danfse(aj: Ajustes, args) -> None:
+    sefin = nfse.Sefin(carregar_certificado(aj), _ambiente(args))
+    for tentativa in range(1, args.tentativas + 1):
+        try:
+            pdf = sefin.baixar_danfse(args.chave)
+            break
+        except nfse.FalhaComunicacao as e:
+            if tentativa == args.tentativas:
+                raise
+            print(f"tentativa {tentativa}/{args.tentativas}: {e}; de novo em {args.intervalo}s", file=sys.stderr)
+            time.sleep(args.intervalo)
+    destino = Path(args.saida or f"{args.chave}-danfse.pdf")
+    destino.write_bytes(pdf)
     print(f"Salvo em {destino}")
 
 
@@ -358,10 +376,17 @@ def montar_parser() -> argparse.ArgumentParser:
     g = p.add_mutually_exclusive_group(required=True)
     g.add_argument("--id")
     g.add_argument("--numero", type=int)
+    p.add_argument("--serie", help="série da DPS (padrão: a da configuração; o Emissor Web usa 70000)")
     p = sub.add_parser("baixar", help="baixa o XML de uma NFS-e pela chave")
     ambiente(p)
     p.add_argument("chave")
     p.add_argument("--saida")
+    p = sub.add_parser("danfse", help="baixa o PDF (DANFSe) de uma NFS-e pela chave")
+    ambiente(p)
+    p.add_argument("chave")
+    p.add_argument("--saida")
+    p.add_argument("--tentativas", type=int, default=1, help="o serviço cai com frequência (503)")
+    p.add_argument("--intervalo", type=int, default=120, help="segundos entre tentativas")
     return ap
 
 
@@ -371,6 +396,7 @@ COMANDOS = {
     "emitir": cmd_emitir,
     "consultar": cmd_consultar,
     "baixar": cmd_baixar,
+    "danfse": cmd_danfse,
 }
 
 
@@ -384,5 +410,6 @@ def main(argv: list[str] | None = None) -> None:
         raise SystemExit(1)
     except nfse.FalhaComunicacao as e:
         print(f"falha de comunicação com a Sefin: {e}", file=sys.stderr)
-        print("Antes de tentar de novo, rode `nfse consultar` com o mesmo número: a nota pode ter saído.", file=sys.stderr)
+        if args.comando == "emitir":
+            print("Antes de tentar de novo, rode `nfse consultar` com o mesmo número: a nota pode ter saído.", file=sys.stderr)
         raise SystemExit(3)

@@ -66,3 +66,32 @@ def test_erros_em_minusculas_e_objeto_unico():
 
 def test_compactacao_e_gzip_base64():
     assert gzip.decompress(__import__("base64").b64decode(compactar(b"<a/>"))) == b"<a/>"
+
+
+class AdnFalso(Sefin):
+    def __init__(self, status: int, corpo: bytes):
+        self.ambiente = HOMOLOGACAO
+        self.resposta = (status, corpo)
+        self.urls: list[str] = []
+
+    def _abrir(self, url, metodo="GET", dados=None, accept="application/json"):
+        self.urls.append(url)
+        return self.resposta
+
+
+def test_danfse_devolve_o_pdf():
+    adn = AdnFalso(200, b"%PDF-1.7 ...")
+    assert adn.baixar_danfse("4" * 50) == b"%PDF-1.7 ..."
+    assert adn.urls == ["https://adn.producaorestrita.nfse.gov.br/danfse/" + "4" * 50]
+
+
+@pytest.mark.parametrize("status, corpo", [(503, b"<html>503</html>"), (200, b"<html>manutencao</html>")])
+def test_danfse_fora_do_ar_e_falha_de_comunicacao(status, corpo):
+    from nfse import FalhaComunicacao
+    with pytest.raises(FalhaComunicacao):
+        AdnFalso(status, corpo).baixar_danfse("4" * 50)
+
+
+def test_danfse_nota_inexistente_e_rejeicao():
+    with pytest.raises(Rejeicao):
+        AdnFalso(404, b'{"erros":[{"Codigo":"E404","Descricao":"nao encontrada"}]}').baixar_danfse("4" * 50)

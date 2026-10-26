@@ -42,7 +42,9 @@ nfse dps --tomador cliente --valor 9000 --descricao-arquivo desc.txt   # gera e 
 nfse emitir --tomador cliente --valor 9000 --descricao-arquivo desc.txt
 nfse emitir --producao --tomador cliente --valor 9000 --descricao-arquivo desc.txt
 nfse consultar --numero 3                          # essa DPS virou nota?
+nfse consultar --serie 70000 --numero 3            # idem, para uma nota do Emissor Web
 nfse baixar <chave de acesso>                      # XML da NFS-e
+nfse danfse <chave de acesso> --tentativas 30      # PDF; o serviço do ADN cai com frequência (503)
 ```
 
 O número da DPS é o último usado + 1 (guardado em `~/.config/nfse-cli/numeracao.json`, por CNPJ, ambiente e
