@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Falha de segurança
+    url: https://github.com/regisdias/nfse-cli/security/advisories/new
+    about: Reporte em particular, não numa issue pública.
+  - name: Dúvida tributária
+    url: https://www.gov.br/nfse/pt-br
+    about: Qual código, alíquota ou regime usar é com a sua contabilidade e o portal da NFS-e nacional.

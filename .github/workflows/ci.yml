@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testes:
+    name: Testes (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e '.[dev]'
+      - run: pytest -q
+
+  nucleo:
+    name: Núcleo sem o reportlab
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      # Instala só as dependências do núcleo: o que não for lxml ou cryptography quebra aqui.
+      - run: pip install -e . pytest
+      - run: pytest -q
+
+  lambda:
+    name: Pacote da Lambda
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Empacota duas vezes e confere que o zip é o mesmo
+        run: |
+          python lambda/empacotar.py
+          primeiro=$(sha256sum dist/nfse-lambda-arm64-py3.13.zip | cut -d' ' -f1)
+          python lambda/empacotar.py
+          segundo=$(sha256sum dist/nfse-lambda-arm64-py3.13.zip | cut -d' ' -f1)
+          test "$primeiro" = "$segundo" || { echo "zip mudou entre dois builds iguais"; exit 1; }

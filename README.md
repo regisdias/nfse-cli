@@ -1,139 +1,205 @@
+<div align="center">
+
+<img src="assets/logo.svg" alt="" width="96" height="96">
+
 # nfse-cli
 
-Emissão de NFS-e pela API da **Sefin Nacional** (Sistema Nacional NFS-e), sem passar pelo site do governo.
+**Emita NFS-e pela API nacional da Receita, do terminal ou pedindo ao seu agente de IA.**<br>
+Sem passar pelo site do governo e sem biblioteca de terceiros mexendo no seu certificado.
 
-Três peças no mesmo repositório:
+[![CI](https://img.shields.io/github/actions/workflow/status/regisdias/nfse-cli/ci.yml?branch=main&label=CI&style=flat-square)](https://github.com/regisdias/nfse-cli/actions/workflows/ci.yml)
+[![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue?style=flat-square)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab?style=flat-square)](#instalação)
+[![Skill](https://img.shields.io/badge/skill-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20Antigravity-d97757?style=flat-square)](#funciona-com-quais-agentes)
 
-- **`nfse`**: biblioteca Python **sem estado**. Monta a DPS (leiaute 1.01), assina (XMLDSig), valida no XSD
-  oficial e fala com a Sefin por mTLS. Não sabe de banco, cliente nem agenda: numeração, série e configuração
-  entram como parâmetro. É o que o painel e a Lambda emissora vão usar.
-- **`nfse`** (comando): linha de comando que consome a biblioteca e guarda o pouco estado que precisa
-  (configuração e último número de DPS usado).
-- **`nfse_lambda`**: handler de AWS Lambda sobre a biblioteca (ver [Lambda](#lambda)).
+</div>
 
-Dependências do núcleo: só `lxml` e `cryptography`. Nenhuma biblioteca de terceiros específica de NFS-e.
+> [!NOTE]
+> **Em desenvolvimento.** A biblioteca, a linha de comando, a Lambda e a geração do PDF já funcionam e emitem
+> notas reais em produção. A skill e o instalador de um comando chegam nas próximas versões; até lá, a
+> instalação é [manual](#instalação-manual).
+
+---
+
+## O que é
+
+A NFS-e nacional tem uma API própria (Sefin Nacional), autenticada pelo certificado digital A1 da empresa.
+Este projeto conversa com ela diretamente: monta a nota, assina, confere contra o esquema oficial e envia.
+
+São quatro peças, cada uma para um jeito de usar:
+
+| Peça | Para quem | O que faz |
+|---|---|---|
+| **Skill** | Quem usa Claude Code, Codex ou Antigravity | Você pede "emite a nota da Empresa X deste mês" e o agente faz o resto, conferindo tudo com você antes |
+| **`nfse`** (linha de comando) | Quem prefere o terminal | Emite, consulta, baixa o XML e gera o PDF |
+| **`nfse`** (biblioteca Python) | Quem integra num sistema | Funções sem estado: o sistema guarda numeração e cadastro, a biblioteca cuida da nota |
+| **`nfse_lambda`** | Quem roda na AWS | Função pronta para AWS Lambda, com o certificado no Secrets Manager |
+
+## Como a skill funciona
+
+### Na primeira vez: configurar
+
+A skill precisa saber quem emite, que serviço é prestado e para quem. Há dois caminhos:
+
+- **A partir de uma nota que você já emitiu (recomendado).** Entregue o PDF, o XML ou a chave de acesso de uma
+  nota anterior. A skill baixa o XML pela API com o seu certificado e copia dele o regime tributário, o código
+  do serviço, o ISS, o cliente, o valor e a descrição. No fim, mostra um resumo em português para você
+  confirmar.
+- **Manual, para a primeira nota da empresa.** A skill pergunta uma coisa de cada vez, e só o que se aplica ao
+  seu caso: regime (MEI, Simples, Lucro Presumido), o serviço que você presta (você descreve com suas palavras
+  e ela procura o código na tabela nacional), ISS, cliente (pelo CNPJ ela preenche nome e endereço), valor, e
+  como você quer receber o PDF e o e-mail.
+
+Os dois caminhos terminam com uma nota de teste em **homologação**, o ambiente de testes da Receita, que não tem
+valor fiscal. A produção só fica disponível depois disso.
+
+### Todo mês: emitir
+
+```mermaid
+flowchart LR
+    A["Você pede a nota"] --> B{"Já emitida<br>este mês?"}
+    B -- sim --> X["Avisa e para"]
+    B -- não --> C["Compara com<br>a nota anterior"]
+    C --> D["Mostra o resumo<br>e pede confirmação"]
+    D --> E["Emite em produção"]
+    E --> F["Gera o PDF<br>e salva na pasta"]
+    F --> G["Prepara o e-mail<br>para você enviar"]
+```
+
+- **Nada vai para produção sem você confirmar.** Se o valor ou a descrição mudarem em relação ao mês anterior,
+  a skill para e pergunta.
+- **Se a conexão cair no meio,** ela consulta a Receita antes de tentar de novo, para não emitir a mesma nota
+  duas vezes.
+- **O e-mail fica como rascunho, e quem envia é você.** No Mac com Outlook, a skill abre o rascunho pronto, com
+  o PDF anexado. Nos outros casos, deixa um arquivo `.eml` ou só os arquivos na pasta.
+
+## Funciona com quais agentes
+
+A skill segue o padrão aberto [Agent Skills](https://agentskills.io): um `SKILL.md` com as instruções e os scripts
+ao lado. O mesmo arquivo serve para os três agentes, e o instalador coloca um atalho na pasta de cada um que
+encontrar na sua máquina:
+
+| Agente | Pasta da skill |
+|---|---|
+| Claude Code | `~/.claude/skills/nfse/` |
+| Codex (OpenAI) | `~/.agents/skills/nfse/` |
+| Antigravity (Google) | `~/.gemini/config/skills/nfse/` |
+
+O agente precisa poder rodar comandos no terminal, porque é assim que a skill chama a linha de comando `nfse`.
+Outros agentes que leem `SKILL.md` devem funcionar também.
 
 ## Instalação
 
+O instalador de um comando chega junto com a skill. Para você saber antes de rodar, isto é o que ele instala:
+
+| O quê | Onde | Para quê |
+|---|---|---|
+| Ambiente Python isolado | `~/.local/share/nfse-cli/` | Não mexe no Python do sistema nem em outros projetos |
+| `lxml` e `cryptography` | dentro desse ambiente | Assinar e validar a nota (as únicas dependências do núcleo) |
+| `reportlab` | dentro desse ambiente | Gerar o PDF da nota |
+| Comando `nfse` | `~/.local/bin/nfse` | A linha de comando, que a skill também usa |
+| Atalho da skill | as pastas da tabela acima | Para o agente encontrar a skill |
+| Sua configuração | `~/.config/nfse-cli/` | Criada pela skill na primeira vez; não sai da sua máquina |
+
+Pré-requisitos: Python 3.11 ou mais novo, e o certificado A1 (`.pfx`) da empresa.
+
+Para desinstalar, apague `~/.local/share/nfse-cli/`, `~/.local/bin/nfse` e os atalhos da skill. A configuração
+em `~/.config/nfse-cli/` continua lá, para o caso de você reinstalar; apague à mão se quiser.
+
+### Instalação manual
+
 ```bash
-python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'   # '.[danfse]' para só gerar PDF
-.venv/bin/pytest            # testes offline
+git clone https://github.com/regisdias/nfse-cli.git && cd nfse-cli
+python3 -m venv .venv && .venv/bin/pip install -e '.[danfse]'
+mkdir -p ~/.config/nfse-cli && cp config.exemplo.toml ~/.config/nfse-cli/config.toml   # e preencha
 ```
 
-Em outro projeto, instalar por tag: `pip install 'nfse-cli @ git+ssh://git@github.com/<dono>/nfse-cli.git@v0.1.0'`.
-
-## Configuração
-
-1. Copie `config.exemplo.toml` para `~/.config/nfse-cli/config.toml` e preencha prestador, serviço e tomadores.
-2. Guarde a senha do certificado no Keychain (a CLI lê de lá; nunca do arquivo de configuração):
-
-   ```bash
-   security add-generic-password -s nfse-cli -a <CNPJ do prestador> -w
-   ```
-
-   Alternativa: variável `NFSE_CERT_SENHA`. Sem nenhuma das duas, a CLI pergunta.
-
-## Uso
-
-Homologação (produção restrita) é o padrão. Produção só com `--producao` **e** confirmação digitada.
+A senha do certificado fica no cofre do sistema, nunca em arquivo. No macOS:
 
 ```bash
-nfse certificado                                   # titular, CNPJ, validade
-nfse dps --tomador cliente --valor 9000 --descricao-arquivo desc.txt   # gera e valida, não envia
-nfse emitir --tomador cliente --valor 9000 --descricao-arquivo desc.txt
-nfse emitir --producao --tomador cliente --valor 9000 --descricao-arquivo desc.txt
+security add-generic-password -s nfse-cli -a <CNPJ da empresa> -w
+```
+
+Nos outros sistemas, por enquanto, use a variável `NFSE_CERT_SENHA` ou digite a senha quando o comando pedir.
+
+## Segurança
+
+O certificado A1 assina notas em nome da empresa, e o projeto é construído em volta disso:
+
+- **Nenhuma biblioteca de terceiros específica de NFS-e.** O núcleo usa só `lxml`, `cryptography` e a
+  biblioteca padrão do Python. Tudo o que toca o certificado está neste repositório, para você ler.
+- **A senha nunca vai para arquivo.** Fica no cofre do sistema (Keychain, no macOS) ou, na Lambda, no Secrets
+  Manager. A chave privada fica em memória; ela só passa pelo disco cifrada e por instantes, porque o TLS do
+  Python só aceita certificado de cliente vindo de arquivo.
+- **Os logs nunca têm XML, dados do cliente nem senha.**
+- **Homologação é o padrão.** Produção exige pedido explícito e confirmação digitada (na Lambda, liberação na
+  própria função).
+- **Só conversa com a Receita.** As conexões são apenas com os servidores da Sefin Nacional.
+
+Achou uma falha? Veja [SECURITY.md](SECURITY.md).
+
+## Linha de comando
+
+```bash
+nfse certificado                                   # titular, CNPJ e validade do certificado
+nfse dps --tomador cliente --valor 9000 --descricao-arquivo desc.txt   # monta e valida, não envia
+nfse emitir --tomador cliente --valor 9000 --descricao-arquivo desc.txt             # homologação
+nfse emitir --producao --tomador cliente --valor 9000 --descricao-arquivo desc.txt  # produção
 nfse consultar --numero 3                          # essa DPS virou nota?
 nfse consultar --serie 70000 --numero 3            # idem, para uma nota do Emissor Web
-nfse baixar <chave de acesso>                      # XML da NFS-e
-nfse danfse <chave de acesso>                      # PDF (DANFSe) gerado aqui a partir do XML
-nfse danfse --xml nota.xml                         # idem, de um XML salvo, sem rede
+nfse baixar <chave de acesso>                      # XML da nota
+nfse danfse <chave de acesso>                      # PDF da nota
+nfse danfse --xml nota.xml                         # PDF de um XML salvo, sem internet
 ```
 
-O número da DPS é o último usado + 1 (guardado em `~/.config/nfse-cli/numeracao.json`, por CNPJ, ambiente e
-série), e só avança depois de a nota sair. `--numero` força um número.
+A numeração da DPS fica em `~/.config/nfse-cli/numeracao.json` e só avança depois que a nota sai. A série padrão
+é 1. O Emissor Web do governo usa 70000 em diante, então as duas numerações não se cruzam.
 
-## Como a emissão funciona
+## Biblioteca Python
 
-1. Monta a DPS e assina o `infDPS` (RSA-SHA256, C14N 1.0 inclusiva, enveloped, `<Signature>` sem prefixo).
-2. Confere a assinatura e o XSD sobre os **bytes finais**, antes de qualquer envio.
-3. Consulta `GET /dps/{id}`: se a DPS já virou nota (envio anterior que deu timeout), baixa a nota existente
-   em vez de reenviar.
-4. Envia `POST /nfse` com `{"dpsXmlGZipB64": ...}` e devolve chave de acesso, número e XML da NFS-e.
+```python
+import nfse
 
-Erros da Sefin (`E0xxx`) viram `nfse.Rejeicao` e não adianta tentar de novo; rede, timeout e 5xx viram
-`nfse.FalhaComunicacao`, que pode ser repetida, sempre consultando a DPS antes.
+cfg = nfse.config_de_dict({
+    "prestador": {"cnpj": "11222333000181", "cod_municipio": "3550308", "op_simp_nac": 3, "reg_ap_trib_sn": 1},
+    "servico": {"c_trib_nac": "170101", "c_nbs": "114013900", "tot_trib": {"modo": "sn", "percentual": 6}},
+})
+cert = nfse.Certificado.de_pfx(pfx_bytes, senha)
+tomador = nfse.tomador_de_dict({"documento": "11444777000161", "nome": "CLIENTE LTDA"})
 
-## DANFSe (PDF)
-
-A API de DANFSe do ADN foi suspensa em 03/08/2026: pela Nota Técnica SE/CGNFS-e nº 008, o PDF passou a ser
-gerado pelo próprio software de emissão, no leiaute da NT. `nfse.gerar_danfse(xml)` faz isso (extra
-`danfse`, que traz o reportlab; o núcleo continua só com lxml e cryptography):
-
-- uma página A4, blocos e posições do item 2.4.5 da NT, QR Code para a consulta pública da nota;
-- só mostra o que está no XML (a NT proíbe acrescentar informação); campo vazio vira `-`;
-- blocos sem dados encolhem (notas 2 a 5) e a sobra vai para "Informações Complementares";
-- homologação sai com "NFS-e SEM VALIDADE JURÍDICA" em vermelho.
-
-Fontes: Helvetica (mesmas métricas da Arial pedida pela NT). Nome do município do tomador vem da tabela do IBGE
-empacotada em `danfse_recursos/municipios.csv`. Ainda não faz as marcas d'água de cancelada/substituída: o XML
-da nota não diz isso (é um evento à parte).
-
-## Lambda
-
-`nfse_lambda.handler.handler` é uma função pronta para AWS Lambda; os projetos usam o pacote por versão, sem
-copiar código. Sem estado, como a biblioteca: o evento traz a configuração do prestador (mesmo formato do
-TOML, em JSON), a série e o número da DPS, que é o projeto quem controla no banco dele.
-
-```json
-{"acao": "emitir", "ambiente": "homologacao", "config": {"prestador": {...}, "servico": {...}},
- "serie": "1", "numero": 7, "valor": "9000.00", "descricao": "...", "tomador": {...}}
+r = nfse.emitir(cfg, cert, nfse.HOMOLOGACAO, serie="1", numero=1, valor="9000.00",
+                descricao="Consultoria em tecnologia.", tomador=tomador)
+print(r.numero_nfse, r.chave_acesso)
+pdf = nfse.gerar_danfse(r.xml_nfse)
 ```
 
-Ações: `emitir`, `dps` (assina e valida sem enviar), `consultar`, `baixar`, `danfse`. Resposta `{"ok": true, ...}`
-ou `{"ok": false, "erro": "rejeicao" | "dados" | "certificado" | "comunicacao", ...}`; `comunicacao` pode ser
-repetida, porque `emitir` consulta a DPS antes de enviar. Detalhes no cabeçalho de `handler.py`.
+Em outro projeto, instale por versão: `pip install 'nfse-cli @ git+https://github.com/regisdias/nfse-cli@v0.1.0'`.
 
-- **Certificado** no Secrets Manager, um segredo por CNPJ (`NFSE_SEGREDO_CERTIFICADO="nfse/certificado/{cnpj}"`),
-  conteúdo `{"pfx": "<base64>", "senha": "..."}`. Nunca no evento nem em variável de ambiente. Fica em cache
-  na instância por uma hora.
-- **Produção** só com `"ambiente": "producao"` no evento **e** `NFSE_PRODUCAO_LIBERADA=1` na função.
-- **Log** só com ação, id da DPS, chave e códigos de erro.
-- **Rede:** a função precisa sair para a internet (fora de VPC, ou com NAT).
+## Documentação
 
-Empacotar (de um Mac também: o pip baixa as rodas Linux da arquitetura pedida):
+- [Como a emissão funciona](docs/emissao.md): assinatura, validação, reenvio seguro e as armadilhas da API.
+- [PDF da nota (DANFSe)](docs/danfse.md): por que o PDF é gerado aqui e o que a Nota Técnica 008 exige.
+- [AWS Lambda](docs/lambda.md): evento, certificado no Secrets Manager e empacotamento.
 
-```bash
-.venv/bin/python lambda/empacotar.py               # dist/nfse-lambda-arm64-py3.13.zip, ~10 MB
-.venv/bin/python lambda/empacotar.py --danfse      # com reportlab, ~19 MB
-.venv/bin/python lambda/empacotar.py --camada      # como Lambda layer, para um handler próprio
-```
+## O que ainda não cobre
 
-O zip é determinístico: sem mudança, mesmo hash, e o deploy não reenvia a função. `lambda/template.exemplo.yaml`
-tem a função, as permissões (segredo e KMS) e o comando para criar o segredo.
+O caso testado de ponta a ponta, em produção, é **Simples Nacional (ME/EPP) sem retenção**, para cliente com CNPJ
+no Brasil. Ainda não cobre:
 
-## Armadilhas já resolvidas
+- retenções federais (IR, PIS, COFINS, CSLL);
+- ISS retido pelo cliente (o campo existe, mas não foi testado de ponta a ponta);
+- cliente no exterior (exportação de serviço) e dedução da base de cálculo;
+- MEI;
+- marca d'água de nota cancelada ou substituída no PDF.
 
-- **C14N do libxml2 com namespace padrão aninhado.** O `<Signature>` redefine o namespace padrão da `<DPS>`, e o
-  C14N de subárvore do lxml emite `xmlns=""` falso nos netos. A assinatura sairia sobre bytes que a Sefin nunca
-  calcula (E0714). `assinatura._c14n` canonicaliza uma cópia do elemento como raiz, e
-  `test_c14n_confere_com_implementacao_independente` confere contra o `canonicalize` em Python puro da stdlib.
-- **Prefixo de namespace é rejeitado** (E1228): `Signature`, nunca `ds:Signature`.
-- **Dois leiautes com o mesmo nome "1.01".** A NT 009 mudou o conteúdo sem mudar a versão: `finNFSe` passou a
-  ser obrigatório logo depois de `tpEmit`, e `cNBS` foi para antes de `xDescServ`. A produção restrita já está
-  nela (pacote de 20/10/2026); a produção, não. Cada pacote oficial fica em `src/nfse/esquemas/<data>/` e
-  `nfse.LEIAUTE_POR_AMBIENTE` diz qual cada ambiente usa. Na virada da produção, trocar ali. Sinal de que virou:
-  rejeição `E1235` falando de `finNFSe`.
-- **XSD de 09/02/2026 com `^...$` na série.** Em regex de XSD, `^` e `$` são literais; o libxml2 recusaria toda
-  série. A cópia em `esquemas/20260209/` tira os dois (comentado no arquivo). O pacote de 20/10/2026 já corrigiu
-  e está sem alteração.
-- **Texto só até U+00FF.** Travessão (—) e aspas curvas reprovam no esquema; a biblioteca recusa antes, com a
-  lista dos caracteres.
-- **Série de aplicativo próprio: 1 a 49999** (E0010). O Emissor Web usa 70000+, então a numeração daqui não
-  colide com a de lá.
-- **ME/EPP no Simples, sem retenção:** não informa `pAliq` (E0625) e não pode usar `indTotTrib` (E0712).
-- **Prestador emitente não informa nome nem endereço** (E0121): vêm do cadastro nacional.
+Se o seu caso está nessa lista, use por enquanto o Emissor Web do governo.
 
-## Referências oficiais
+## Contribuir
 
-- Documentação atual (XSD, Anexo I com leiaute e regras): <https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual>
-- APIs e swaggers: <https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/apis-prod-restrita-e-producao>
+Veja [CONTRIBUTING.md](CONTRIBUTING.md). A regra principal: nenhum dado real (CNPJ, nome, endereço, certificado) em
+teste, exemplo ou issue.
+
+## Licença
+
+[MIT](LICENSE): use, modifique e redistribua à vontade. Este não é um software oficial da Receita Federal; confira
+com a sua contabilidade a configuração tributária da sua empresa.

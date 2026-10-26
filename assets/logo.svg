@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="nfse-cli">
+  <rect x="1" y="1" width="126" height="126" rx="28" fill="#0d1117" stroke="#30363d" stroke-width="2"/>
+
+  <!-- nota com o canto dobrado -->
+  <path d="M34 22 H76 L94 40 V106 H34 Z" fill="#161b22" stroke="#6e7681" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M76 22 V40 H94" fill="none" stroke="#6e7681" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- linhas da nota -->
+  <g stroke="#30363d" stroke-width="6" stroke-linecap="round">
+    <line x1="46" y1="50" x2="70" y2="50"/>
+    <line x1="46" y1="64" x2="82" y2="64"/>
+  </g>
+
+  <!-- selo de emitida -->
+  <circle cx="88" cy="92" r="22" fill="#238636" stroke="#0d1117" stroke-width="4"/>
+  <path d="M78 92 L85 99 L99 85" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

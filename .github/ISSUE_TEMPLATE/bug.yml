@@ -1,0 +1,43 @@
+name: Problema
+description: Algo não funciona, a Sefin rejeitou uma nota ou o PDF saiu errado
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Não cole dado real.** Nada de CNPJ, nome de cliente, XML de nota, chave de acesso, certificado ou senha.
+        Troque por dados de exemplo; o código de rejeição e a mensagem da Sefin costumam bastar.
+  - type: dropdown
+    id: peca
+    attributes:
+      label: Onde
+      options: [Skill, Linha de comando, Biblioteca, Lambda, PDF (DANFSe)]
+    validations:
+      required: true
+  - type: dropdown
+    id: ambiente
+    attributes:
+      label: Ambiente da Sefin
+      options: [Homologação, Produção, Nenhum (não chegou a enviar)]
+    validations:
+      required: true
+  - type: textarea
+    id: oque
+    attributes:
+      label: O que aconteceu e o que você esperava
+      placeholder: |
+        Rodei `nfse emitir --tomador cliente --valor 100 ...` e a Sefin respondeu:
+          E0625: ...
+    validations:
+      required: true
+  - type: textarea
+    id: regime
+    attributes:
+      label: Regime e serviço
+      description: Ajuda a reproduzir. Sem CNPJ.
+      placeholder: Simples Nacional ME/EPP, serviço 17.01.01, ISS não retido, cliente PJ no Brasil
+  - type: input
+    id: versao
+    attributes:
+      label: Versão
+      description: Saída de `nfse --versao`

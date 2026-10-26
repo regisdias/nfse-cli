@@ -1,0 +1,19 @@
+name: Ideia ou caso não coberto
+description: Um regime, retenção ou jeito de usar que ainda não funciona
+labels: ["melhoria"]
+body:
+  - type: markdown
+    attributes:
+      value: Sem dados reais, por favor. Se citar regra fiscal, inclua a fonte (nota técnica, anexo, código de rejeição).
+  - type: textarea
+    id: caso
+    attributes:
+      label: O caso
+      placeholder: Presto serviço para empresa do Lucro Presumido, que retém IR e CSRF; hoje a configuração recusa.
+    validations:
+      required: true
+  - type: textarea
+    id: fonte
+    attributes:
+      label: Referência
+      placeholder: Anexo I do leiaute, campos vRetIRRF e vRetCSLL

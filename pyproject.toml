@@ -8,6 +8,17 @@ version = "0.1.0"
 description = "Emissão de NFS-e pela API da Sefin Nacional: biblioteca sem estado + linha de comando"
 readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["nfse", "nfs-e", "nota fiscal", "sefin", "receita federal", "danfse"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Natural Language :: Portuguese (Brazilian)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Office/Business :: Financial :: Accounting",
+]
 # Núcleo propositalmente enxuto: nenhuma biblioteca de terceiros específica de NFS-e.
 dependencies = [
     "lxml>=5",
@@ -17,6 +28,11 @@ dependencies = [
 [project.optional-dependencies]
 danfse = ["reportlab>=4"]
 dev = ["pytest>=8", "reportlab>=4"]
+
+[project.urls]
+Repositorio = "https://github.com/regisdias/nfse-cli"
+Documentacao = "https://github.com/regisdias/nfse-cli#readme"
+Problemas = "https://github.com/regisdias/nfse-cli/issues"
 
 [project.scripts]
 nfse = "nfse_cli.cli:main"
