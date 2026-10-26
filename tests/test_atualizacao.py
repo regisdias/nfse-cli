@@ -49,3 +49,14 @@ def test_atualizar_fora_do_instalador_nao_mexe(pasta, monkeypatch):
     monkeypatch.setattr(atualizacao, "buscar_ultima", lambda: "v99.0.0")
     with pytest.raises(SystemExit):
         cli.main(["atualizar"])
+
+
+def test_falha_na_consulta_nao_conta_como_verificado(pasta, monkeypatch):
+    respostas = [None, "v99.0.0"]
+    monkeypatch.setattr(atualizacao, "buscar_ultima", lambda: respostas.pop(0))
+    assert atualizacao.aviso() is None  # falhou (sem rede, repositório fora do ar...)
+    dados = atualizacao._ler_cache()
+    assert "verificado_em" not in dados
+    dados["falhou_em"] -= atualizacao.INTERVALO_APOS_FALHA + 1  # passou uma hora
+    atualizacao._gravar_cache(dados)
+    assert "99.0.0" in atualizacao.aviso()

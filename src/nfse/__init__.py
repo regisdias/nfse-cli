@@ -29,7 +29,7 @@ from .emissao import Config, DpsAssinada, Resultado, emitir, gerar_dps
 from .esquema import EsquemaInvalido, validar_dps
 from .sefin import Erro, FalhaComunicacao, Rejeicao, Sefin
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 __all__ = [
     "HOMOLOGACAO", "PRODUCAO",

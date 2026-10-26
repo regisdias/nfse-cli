@@ -2,6 +2,12 @@
 
 Formato de [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões em [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.2.1] - 2026-10-26
+
+### Corrigido
+- Aviso de versão nova: uma consulta que falhava (sem rede, GitHub fora do ar) contava como feita e só voltava a
+  tentar no dia seguinte. Agora tenta de novo em uma hora.
+
 ## [0.2.0] - 2026-10-26
 
 ### Adicionado

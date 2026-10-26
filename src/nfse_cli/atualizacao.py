@@ -24,6 +24,7 @@ from .cli import ErroCli
 REPOSITORIO = "regisdias/nfse-cli"
 URL_ULTIMA = f"https://api.github.com/repos/{REPOSITORIO}/releases/latest"
 INTERVALO = 24 * 3600
+INTERVALO_APOS_FALHA = 3600  # sem rede ou API fora: tenta de novo logo, não amanhã
 PASTA_INSTALADOR = Path.home() / ".local" / "share" / "nfse-cli" / "venv"
 
 
@@ -70,8 +71,13 @@ def aviso() -> str | None:
     dados = _ler_cache()
     if dados.get("desligado"):
         return None
-    if time.time() - dados.get("verificado_em", 0) > INTERVALO:
-        dados.update(verificado_em=time.time(), ultima=buscar_ultima() or dados.get("ultima"))
+    agora = time.time()
+    if agora - dados.get("verificado_em", 0) > INTERVALO and agora - dados.get("falhou_em", 0) > INTERVALO_APOS_FALHA:
+        if ultima := buscar_ultima():
+            dados.update(verificado_em=agora, ultima=ultima)
+            dados.pop("falhou_em", None)
+        else:
+            dados["falhou_em"] = agora
         _gravar_cache(dados)
     ultima = dados.get("ultima")
     if ultima and _versao(ultima) > _versao(nfse.__version__):
@@ -97,7 +103,7 @@ def cmd_atualizar(args) -> None:
         raise ErroCli(f"este nfse não foi instalado pelo install.sh ({sys.prefix}); atualize do jeito que instalou "
                       f"(git pull, pip install -U...). Versão nova: {ultima}")
     origem = f"https://github.com/{REPOSITORIO}/archive/refs/tags/{ultima}.zip"
-    print(f"Atualizando para {ultima}...")
+    print(f"Atualizando para {ultima}...", flush=True)
     subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", "--disable-pip-version-check", "--upgrade",
                     f"nfse-cli[danfse] @ {origem}"], check=True)
     # A skill vem no pacote: o processo novo copia a versão nova para os agentes.
