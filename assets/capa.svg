@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-label="nfse-cli: o agente emite a nota do mês, confere com a anterior, pede confirmação, gera o PDF e deixa o e-mail pronto.">
+  <defs>
+    <linearGradient id="fundo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1117"/>
+      <stop offset="1" stop-color="#0f1d17"/>
+    </linearGradient>
+    <style>
+      .t { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+      .m { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 17px; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="420" rx="24" fill="url(#fundo)"/>
+  <rect x="0.5" y="0.5" width="1199" height="419" rx="24" fill="none" stroke="#30363d"/>
+
+  <!-- marca -->
+  <g transform="translate(64 92) scale(0.75)">
+    <rect x="1" y="1" width="126" height="126" rx="28" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+    <path d="M34 22 H76 L94 40 V106 H34 Z" fill="#0d1117" stroke="#6e7681" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M76 22 V40 H94" fill="none" stroke="#6e7681" stroke-width="4" stroke-linejoin="round"/>
+    <g stroke="#30363d" stroke-width="6" stroke-linecap="round">
+      <line x1="46" y1="50" x2="70" y2="50"/>
+      <line x1="46" y1="64" x2="82" y2="64"/>
+    </g>
+    <circle cx="88" cy="92" r="22" fill="#238636" stroke="#161b22" stroke-width="4"/>
+    <path d="M78 92 L85 99 L99 85" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <text x="64" y="232" class="t" font-size="52" font-weight="700" fill="#f0f6fc">nfse-cli</text>
+  <text x="64" y="276" class="t" font-size="22" fill="#9da7b3">NFS-e pela API nacional,</text>
+  <text x="64" y="306" class="t" font-size="22" fill="#9da7b3">do terminal ou pelo seu agente de IA.</text>
+  <text x="64" y="352" class="t" font-size="15" fill="#6e7681">Biblioteca Python · Linha de comando · AWS Lambda · Skill</text>
+
+  <!-- terminal -->
+  <g transform="translate(500 56)">
+    <rect width="644" height="308" rx="14" fill="#010409" stroke="#30363d"/>
+    <circle cx="24" cy="22" r="6" fill="#f85149"/>
+    <circle cx="44" cy="22" r="6" fill="#d29922"/>
+    <circle cx="64" cy="22" r="6" fill="#3fb950"/>
+    <line x1="0" y1="44" x2="644" y2="44" stroke="#21262d"/>
+
+    <text class="m" x="24" y="80"><tspan fill="#d97757">›</tspan><tspan fill="#f0f6fc"> emite a nota da Empresa Exemplo de outubro</tspan></text>
+    <text class="m" x="24" y="116"><tspan fill="#3fb950">✓</tspan><tspan fill="#9da7b3"> outubro ainda sem nota</tspan></text>
+    <text class="m" x="24" y="144"><tspan fill="#3fb950">✓</tspan><tspan fill="#9da7b3"> igual a setembro: R$ 9.000,00 · consultoria</tspan></text>
+    <text class="m" x="24" y="172"><tspan fill="#d29922">?</tspan><tspan fill="#9da7b3"> emitir em produção? </tspan><tspan fill="#f0f6fc">EMITIR</tspan></text>
+    <text class="m" x="24" y="200"><tspan fill="#3fb950">✓</tspan><tspan fill="#f0f6fc"> NFS-e nº 7 emitida</tspan></text>
+    <text class="m" x="24" y="228"><tspan fill="#3fb950">✓</tspan><tspan fill="#9da7b3"> PDF salvo em NFS-e/Empresa Exemplo/</tspan></text>
+    <text class="m" x="24" y="256"><tspan fill="#3fb950">✓</tspan><tspan fill="#9da7b3"> e-mail pronto, aguardando você enviar</tspan></text>
+    <rect x="24" y="272" width="10" height="20" fill="#9da7b3" opacity="0.6"/>
+  </g>
+</svg>

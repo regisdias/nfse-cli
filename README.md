@@ -1,16 +1,29 @@
 <div align="center">
 
-<img src="assets/logo.svg" alt="" width="96" height="96">
+<img src="assets/capa.svg" alt="nfse-cli: o agente emite a nota do mês, confere com a anterior, pede confirmação, gera o PDF e deixa o e-mail pronto." width="100%">
 
-# nfse-cli
+<h3>
+  <a href="#como-a-skill-funciona">Como funciona</a>
+  <span> · </span>
+  <a href="#instalação">Instalação</a>
+  <span> · </span>
+  <a href="#segurança">Segurança</a>
+  <span> · </span>
+  <a href="#documentação">Documentação</a>
+</h3>
 
-**Emita NFS-e pela API nacional da Receita, do terminal ou pedindo ao seu agente de IA.**<br>
-Sem passar pelo site do governo e sem biblioteca de terceiros mexendo no seu certificado.
+<p>
+  <a href="https://github.com/regisdias/nfse-cli/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/regisdias/nfse-cli/ci.yml?branch=main&logo=githubactions&logoColor=white&label=testes" alt="Testes"></a>
+  <a href="#instalação"><img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-3776AB?logo=python&logoColor=white" alt="Python 3.11, 3.12 e 3.13"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licen%C3%A7a-MIT-2ea44f?logo=opensourceinitiative&logoColor=white" alt="Licença MIT"></a>
+</p>
 
-[![CI](https://img.shields.io/github/actions/workflow/status/regisdias/nfse-cli/ci.yml?branch=main&label=CI&style=flat-square)](https://github.com/regisdias/nfse-cli/actions/workflows/ci.yml)
-[![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue?style=flat-square)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab?style=flat-square)](#instalação)
-[![Skill](https://img.shields.io/badge/skill-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20Antigravity-d97757?style=flat-square)](#funciona-com-quais-agentes)
+<p>
+  <a href="#funciona-com-quais-agentes"><img src="https://img.shields.io/badge/Claude%20Code-D97757?logo=claude&logoColor=white" alt="Claude Code"></a>
+  <a href="#funciona-com-quais-agentes"><img src="https://img.shields.io/badge/Codex-111111?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZD0iTTQgN2w2IDUtNiA1IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8%2BPHBhdGggZD0iTTEyIDE4aDgiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4%3D" alt="Codex"></a>
+  <a href="#funciona-com-quais-agentes"><img src="https://img.shields.io/badge/Antigravity-4285F4?logo=googlegemini&logoColor=white" alt="Antigravity"></a>
+  <a href="docs/lambda.md"><img src="https://img.shields.io/badge/AWS%20Lambda-E7700D?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZD0iTTUgMjFMMTEgOU03IDNoMi41YzEgMCAxLjYuNSAyIDEuNEwxOCAxOWMuNC45IDEgMS4zIDIgMS4zIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8%2BPC9zdmc%2B" alt="AWS Lambda"></a>
+</p>
 
 </div>
 
