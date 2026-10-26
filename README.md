@@ -28,9 +28,29 @@
 </div>
 
 > [!NOTE]
-> **Em desenvolvimento.** A biblioteca, a linha de comando, a Lambda e a geração do PDF já funcionam e emitem
-> notas reais em produção. A skill e o instalador de um comando chegam nas próximas versões; até lá, a
-> instalação é [manual](#instalação-manual).
+> **Em desenvolvimento.** A biblioteca, a linha de comando (com a configuração guiada), a Lambda e a geração do
+> PDF já funcionam e emitem notas reais em produção. A skill e o instalador de um comando chegam nas próximas
+> versões; até lá, a instalação é [manual](#instalação-manual).
+
+## O que atende e o que não atende
+
+Confira antes de instalar. O que está em ❌ a configuração recusa com aviso, em vez de emitir uma nota errada.
+
+| | ✅ Atende | ❌ Ainda não atende |
+|---|---|---|
+| **Regime da empresa** | Simples Nacional, ME ou EPP (testado em produção)<br>🟡 Lucro Presumido e Lucro Real sem retenções (a nota é montada e validada, mas ainda não foi testada em produção) | MEI |
+| **Cliente** | Empresa (CNPJ) ou pessoa (CPF) no Brasil<br>Nota sem cliente identificado | Cliente no exterior (exportação de serviço) |
+| **ISS** | Tributável e recolhido pela própria empresa, no município dela ou em outro | ISS retido pelo cliente<br>Imunidade, exportação, não incidência<br>Benefício municipal, exigibilidade suspensa |
+| **Tributos federais** | Sem retenção | Retenção de IR, PIS, COFINS, CSLL ou INSS |
+| **Reforma tributária** | Notas sem IBS/CBS, como as aceitas hoje | Grupo IBS/CBS |
+| **Valores** | Valor do serviço e tributos aproximados (percentual do Simples, percentual ou valor) | Desconto, dedução da base de cálculo |
+| **O que faz com a nota** | Emitir, consultar, baixar o XML e gerar o PDF | Cancelar, substituir, registrar eventos |
+| **PDF (DANFSe)** | Leiaute oficial da Nota Técnica 008, com QR Code | Marca d'água de nota cancelada ou substituída |
+| **Configuração** | A partir de uma nota anterior (XML, PDF ou chave) ou pergunta por pergunta | |
+| **Onde roda** | macOS (testado), Linux e Windows<br>AWS Lambda | Cofre de senha no Linux e no Windows (por enquanto, a senha vai por variável de ambiente ou é digitada) |
+| **Agentes** | Claude Code, Codex e Antigravity | |
+
+Se o seu caso está na coluna da direita, use por enquanto o Emissor Web do governo.
 
 ---
 
@@ -124,16 +144,23 @@ em `~/.config/nfse-cli/` continua lá, para o caso de você reinstalar; apague �
 ```bash
 git clone https://github.com/regisdias/nfse-cli.git && cd nfse-cli
 python3 -m venv .venv && .venv/bin/pip install -e '.[danfse]'
-mkdir -p ~/.config/nfse-cli && cp config.exemplo.toml ~/.config/nfse-cli/config.toml   # e preencha
+alias nfse="$PWD/.venv/bin/nfse"
 ```
 
-A senha do certificado fica no cofre do sistema, nunca em arquivo. No macOS:
+Depois, a configuração (é o mesmo caminho que a skill segue por você):
 
 ```bash
-security add-generic-password -s nfse-cli -a <CNPJ da empresa> -w
+nfse configurar certificado ~/Downloads/empresa.pfx    # pede a senha e guarda no Keychain
+nfse configurar modelo ~/Downloads/nota-anterior.pdf   # ou o XML, ou a chave de acesso
+nfse configurar salvar ~/.config/nfse-cli/rascunho.json
+nfse emitir --tomador <cliente> --valor 100 --descricao "Teste"   # nota de teste em homologação
 ```
 
-Nos outros sistemas, por enquanto, use a variável `NFSE_CERT_SENHA` ou digite a senha quando o comando pedir.
+Primeira nota da empresa, sem nota anterior? Copie `config.exemplo.toml` para `~/.config/nfse-cli/config.toml` e
+preencha; `nfse servico`, `nfse nbs` e `nfse municipio` ajudam a achar os códigos.
+
+A senha do certificado fica no cofre do sistema, nunca em arquivo. Fora do macOS, por enquanto, use a variável
+`NFSE_CERT_SENHA` ou digite a senha quando o comando pedir.
 
 ## Segurança
 
@@ -154,6 +181,14 @@ Achou uma falha? Veja [SECURITY.md](SECURITY.md).
 ## Linha de comando
 
 ```bash
+nfse configurar certificado empresa.pfx            # copia o certificado e guarda a senha (no seu terminal)
+nfse configurar modelo <xml | pdf | chave>         # lê uma nota já emitida e monta um rascunho
+nfse configurar salvar rascunho.json               # valida o rascunho e grava a configuração
+nfse configurar mostrar                            # a configuração atual, em português
+nfse servico consultoria informática               # procura o código de tributação nacional
+nfse nbs assessoria empresarial                    # procura o código NBS
+nfse municipio itajai sc                           # procura o código IBGE do município
+
 nfse certificado                                   # titular, CNPJ e validade do certificado
 nfse dps --tomador cliente --valor 9000 --descricao-arquivo desc.txt   # monta e valida, não envia
 nfse emitir --tomador cliente --valor 9000 --descricao-arquivo desc.txt             # homologação
@@ -190,22 +225,10 @@ Em outro projeto, instale por versão: `pip install 'nfse-cli @ git+https://gith
 
 ## Documentação
 
+- [Configuração](docs/configuracao.md): os três passos, o formato do rascunho e onde achar cada código.
 - [Como a emissão funciona](docs/emissao.md): assinatura, validação, reenvio seguro e as armadilhas da API.
 - [PDF da nota (DANFSe)](docs/danfse.md): por que o PDF é gerado aqui e o que a Nota Técnica 008 exige.
 - [AWS Lambda](docs/lambda.md): evento, certificado no Secrets Manager e empacotamento.
-
-## O que ainda não cobre
-
-O caso testado de ponta a ponta, em produção, é **Simples Nacional (ME/EPP) sem retenção**, para cliente com CNPJ
-no Brasil. Ainda não cobre:
-
-- retenções federais (IR, PIS, COFINS, CSLL);
-- ISS retido pelo cliente (o campo existe, mas não foi testado de ponta a ponta);
-- cliente no exterior (exportação de serviço) e dedução da base de cálculo;
-- MEI;
-- marca d'água de nota cancelada ou substituída no PDF.
-
-Se o seu caso está nessa lista, use por enquanto o Emissor Web do governo.
 
 ## Contribuir
 

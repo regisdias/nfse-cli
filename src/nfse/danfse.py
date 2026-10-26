@@ -14,16 +14,15 @@ Precisa do extra `danfse` (reportlab): `pip install 'nfse-cli[danfse]'`.
 
 from __future__ import annotations
 
-import csv
 import io
 from datetime import date, datetime
 from decimal import Decimal
-from functools import cache
 from pathlib import Path
 
 from lxml import etree
 
 from .dps import NS
+from .tabelas import municipio
 
 RECURSOS = Path(__file__).parent / "danfse_recursos"
 URL_CONSULTA = "https://www.nfse.gov.br/ConsultaPublica/?tpc=1&chave="
@@ -112,16 +111,6 @@ class _Nota:
     def __call__(self, caminho: str) -> str | None:
         el = self.no(caminho)
         return el.text.strip() if el is not None and el.text and el.text.strip() else None
-
-
-@cache
-def _municipios() -> dict[str, tuple[str, str]]:
-    with open(RECURSOS / "municipios.csv", encoding="utf-8") as f:
-        return {c: (n, uf) for c, n, uf in csv.reader((l for l in f if not l.startswith("#")), delimiter=";")}
-
-
-def municipio(codigo: str | None) -> tuple[str, str] | None:
-    return _municipios().get(codigo or "")
 
 
 # --- formatação ----------------------------------------------------------------

@@ -53,7 +53,7 @@ class Ajustes:
 
 def carregar_ajustes(caminho: Path) -> Ajustes:
     if not caminho.exists():
-        raise ErroCli(f"configuração não encontrada: {caminho} (copie config.exemplo.toml)")
+        raise ErroCli(f"configuração não encontrada: {caminho} (rode `nfse configurar`)")
     with caminho.open("rb") as f:
         d = tomllib.load(f)
     try:
@@ -92,12 +92,25 @@ def senha_certificado(cnpj: str) -> str:
     return getpass.getpass("Senha do certificado: ")
 
 
-def carregar_certificado(aj: Ajustes) -> Certificado:
-    if not aj.arquivo_certificado.exists():
-        raise ErroCli(f"certificado não encontrado: {aj.arquivo_certificado}")
-    cert = Certificado.de_pfx(aj.arquivo_certificado.read_bytes(), senha_certificado(aj.cfg.prestador.cnpj))
-    cert.validar(aj.cfg.prestador.cnpj)
+def abrir_certificado(arquivo: Path, cnpj: str) -> Certificado:
+    if not arquivo.exists():
+        raise ErroCli(f"certificado não encontrado: {arquivo}")
+    dados, senha = arquivo.read_bytes(), senha_certificado(cnpj)
+    try:
+        cert = Certificado.de_pfx(dados, senha)
+    except nfse.CertificadoInvalido as erro:
+        # O Keychain devolve em hexadecimal a senha que não é ASCII puro (com acento, por exemplo).
+        try:
+            em_hex = bytes.fromhex(senha)
+        except ValueError:
+            raise erro from None
+        cert = Certificado.de_pfx(dados, em_hex)
+    cert.validar(cnpj)
     return cert
+
+
+def carregar_certificado(aj: Ajustes) -> Certificado:
+    return abrir_certificado(aj.arquivo_certificado, aj.cfg.prestador.cnpj)
 
 
 # --- numeração local ---------------------------------------------------------
@@ -208,7 +221,7 @@ def _emissao_dos_args(aj: Ajustes, args):
 
 
 def cmd_certificado(aj: Ajustes, args) -> None:
-    cert = Certificado.de_pfx(aj.arquivo_certificado.read_bytes(), senha_certificado(aj.cfg.prestador.cnpj))
+    cert = abrir_certificado(aj.arquivo_certificado, aj.cfg.prestador.cnpj)
     print(f"Titular:  {cert.titular}")
     print(f"CNPJ:     {cert.cnpj}")
     print(f"Validade: {cert.valido_de:%d/%m/%Y} a {cert.valido_ate:%d/%m/%Y} ({cert.dias_para_vencer()} dias)")
@@ -341,6 +354,10 @@ def montar_parser() -> argparse.ArgumentParser:
     g.add_argument("chave", nargs="?", help="baixa o XML da Sefin e gera o PDF")
     g.add_argument("--xml", help="gera o PDF de um XML de NFS-e já salvo (sem rede)")
     p.add_argument("--saida")
+
+    from . import configurar  # aqui dentro: configurar importa este módulo
+
+    ap.sem_config = configurar.registrar(sub)
     return ap
 
 
@@ -355,13 +372,19 @@ COMANDOS = {
 
 
 def main(argv: list[str] | None = None) -> None:
-    args = montar_parser().parse_args(argv)
+    parser = montar_parser()
+    args = parser.parse_args(argv)
     try:
-        aj = carregar_ajustes(args.config)
-        COMANDOS[args.comando](aj, args)
+        if args.comando in parser.sem_config:
+            parser.sem_config[args.comando](args)
+        else:
+            COMANDOS[args.comando](carregar_ajustes(args.config), args)
     except (ErroCli, nfse.DadosInvalidos, nfse.CertificadoInvalido, nfse.EsquemaInvalido, nfse.AssinaturaInvalida,
             nfse.DanfseIndisponivel) as e:
         print(f"erro: {e}", file=sys.stderr)
+        raise SystemExit(1)
+    except nfse.Rejeicao as e:
+        print(f"a Sefin recusou: {e}", file=sys.stderr)
         raise SystemExit(1)
     except nfse.FalhaComunicacao as e:
         print(f"falha de comunicação com a Sefin: {e}", file=sys.stderr)

@@ -5,11 +5,17 @@ Formato de [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões
 ## [Não lançado]
 
 ### Adicionado
+- `nfse configurar`: certificado (senha direto no Keychain), nota modelo pelo XML, PDF ou chave de acesso, e
+  salvar com validação nos esquemas oficiais. Recusa o que ainda não sabe emitir.
+- `nfse servico`, `nfse nbs` e `nfse municipio`: busca nas tabelas oficiais (Anexo B e IBGE), embutidas no pacote.
 - Função para AWS Lambda (`nfse_lambda`), com certificado no Secrets Manager e empacotamento determinístico.
 - Configuração a partir de dicionário (`nfse.config_de_dict`), a mesma para a CLI e a Lambda.
 - PDF da nota (DANFSe) gerado a partir do XML, no leiaute da Nota Técnica 008.
 - Esquemas da Nota Técnica 009 (homologação) ao lado dos de produção.
 - `nfse consultar --serie`, para notas do Emissor Web.
+
+### Corrigido
+- Senha com acento guardada no Keychain: o `security` devolve em hexadecimal e agora é reconhecida.
 
 ## [0.1.0]
 

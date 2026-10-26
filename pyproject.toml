@@ -41,7 +41,7 @@ nfse = "nfse_cli.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-nfse = ["esquemas/*/*.xsd", "danfse_recursos/*"]
+nfse = ["esquemas/*/*.xsd", "danfse_recursos/*", "dados/*.csv"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
