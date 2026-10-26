@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import hashlib
 import json
 import os
 import re
@@ -49,6 +50,10 @@ class Ajustes:
     pasta_notas: Path
     serie: str
     tomadores: dict[str, Tomador]
+    bruto: dict  # o TOML como está: as seções de recorrência e entrega são lidas por quem usa
+
+    def extra_do_tomador(self, apelido: str, secao: str) -> dict:
+        return dict(self.bruto.get("tomadores", {}).get(apelido, {}).get(secao, {}))
 
 
 def carregar_ajustes(caminho: Path) -> Ajustes:
@@ -68,6 +73,7 @@ def carregar_ajustes(caminho: Path) -> Ajustes:
         pasta_notas=(base / Path(d.get("pasta_notas", "notas")).expanduser()),
         serie=str(d.get("serie", "1")),
         tomadores=tomadores,
+        bruto=d,
     )
 
 
@@ -174,12 +180,25 @@ def _tomador_dos_args(aj: Ajustes, args) -> Tomador | None:
     return None
 
 
-def _descricao(args) -> str:
+MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto",
+         "setembro", "outubro", "novembro", "dezembro"]
+
+
+def campos_do_mes(competencia: date) -> dict:
+    """{mes} Outubro, {mes_min} outubro, {ano} 2026, {mes_num} 10: para descrição, nome de arquivo e e-mail."""
+    nome = MESES[competencia.month - 1]
+    return {"mes": nome.capitalize(), "mes_min": nome, "ano": competencia.year, "mes_num": f"{competencia.month:02d}"}
+
+
+def _descricao(aj: Ajustes, args, competencia: date) -> str:
     if args.descricao_arquivo:
         return Path(args.descricao_arquivo).read_text(encoding="utf-8").strip()
     if args.descricao:
         return args.descricao
-    raise ErroCli("informe --descricao ou --descricao-arquivo")
+    padrao = aj.extra_do_tomador(args.tomador, "recorrente").get("descricao") if args.tomador else None
+    if padrao:
+        return padrao.strip().format(**campos_do_mes(competencia))
+    raise ErroCli("informe --descricao ou --descricao-arquivo (ou a descrição em [tomadores.<apelido>.recorrente])")
 
 
 def _resumo(aj: Ajustes, ambiente: int, serie: str, numero: int, valor: Decimal, tomador, descricao: str, competencia) -> str:
@@ -198,26 +217,52 @@ def _resumo(aj: Ajustes, ambiente: int, serie: str, numero: int, valor: Decimal,
     return "\n".join(linhas)
 
 
-def _proximo_numero(aj: Ajustes, ambiente: int, args) -> int:
+def _proximo_numero(aj: Ajustes, ambiente: int, args, sefin: nfse.Sefin | None = None) -> int:
+    """Último número guardado + 1, conferido na Sefin: se esse número já virou nota (numeração local perdida,
+    outra máquina), avança. Sem isso a Sefin devolveria a nota antiga como se fosse a nova."""
     if args.numero:
         return args.numero
-    return ultimo_numero(aj.cfg.prestador.cnpj, ambiente, aj.serie) + 1
+    cnpj, municipio = aj.cfg.prestador.cnpj, aj.cfg.prestador.cod_municipio
+    numero = ultimo_numero(cnpj, ambiente, aj.serie) + 1
+    if sefin is None:
+        return numero
+    for _ in range(1000):
+        if not sefin.consultar_dps(nfse.id_dps(municipio, cnpj, aj.serie, numero)):
+            return numero
+        registrar_numero(cnpj, ambiente, aj.serie, numero)
+        numero += 1
+    raise ErroCli("mais de mil números de DPS seguidos já usados; confira a série na configuração")
 
 
-def _emissao_dos_args(aj: Ajustes, args):
+def _emissao_dos_args(aj: Ajustes, args, sefin: nfse.Sefin | None = None):
     ambiente = _ambiente(args)
-    numero = _proximo_numero(aj, ambiente, args)
+    numero = _proximo_numero(aj, ambiente, args, sefin)
     competencia = date.fromisoformat(args.competencia) if args.competencia else None
+    valor = args.valor
+    if valor is None and args.tomador:
+        valor = aj.extra_do_tomador(args.tomador, "recorrente").get("valor")
+    if valor is None:
+        raise ErroCli("informe --valor (ou o valor em [tomadores.<apelido>.recorrente])")
     emissao = Emissao(
         ambiente=ambiente,
         serie=aj.serie,
         numero=numero,
-        valor=_valor(args.valor),
-        descricao=_descricao(args),
+        valor=_valor(str(valor)),
+        descricao=_descricao(aj, args, competencia or date.today()),
         competencia=competencia,
         info_complementar=args.info,
     )
     return emissao, _tomador_dos_args(aj, args)
+
+
+def codigo_confirmacao(aj: Ajustes, emissao: Emissao, tomador: Tomador | None) -> str:
+    """Seis caracteres que mudam se qualquer dado da nota mudar. `nfse dps --producao` mostra; `nfse emitir
+    --producao --confirmacao` só envia se o código bater. É como um agente prova que a pessoa viu esta nota."""
+    p, s = aj.cfg.prestador, aj.cfg.servico
+    partes = [p.cnpj, emissao.ambiente, emissao.serie, emissao.numero, f"{emissao.valor:.2f}", emissao.descricao,
+              (emissao.competencia or date.today()).isoformat(), emissao.info_complementar or "",
+              tomador.documento if tomador else "", tomador.nome if tomador else "", s.c_trib_nac, s.c_nbs or ""]
+    return hashlib.sha256("\x1f".join(map(str, partes)).encode()).hexdigest()[:6].upper()
 
 
 def cmd_certificado(aj: Ajustes, args) -> None:
@@ -231,32 +276,43 @@ def cmd_certificado(aj: Ajustes, args) -> None:
 
 def cmd_dps(aj: Ajustes, args) -> None:
     cert = carregar_certificado(aj)
-    emissao, tomador = _emissao_dos_args(aj, args)
+    emissao, tomador = _emissao_dos_args(aj, args, nfse.Sefin(cert, _ambiente(args)))
     dps = nfse.gerar_dps(aj.cfg, cert, emissao, tomador)
     destino = Path(args.saida or f"{dps.id}.xml")
     destino.write_bytes(dps.xml)
     print(_resumo(aj, emissao.ambiente, emissao.serie, emissao.numero, emissao.valor, tomador, emissao.descricao, emissao.competencia))
     print(f"\nDPS assinada e validada no XSD (não enviada): {destino}")
+    if emissao.ambiente == PRODUCAO:
+        print(f"Código de confirmação: {codigo_confirmacao(aj, emissao, tomador)}"
+              " (para emitir sem terminal: nfse emitir --producao ... --confirmacao <código>)")
 
 
 def cmd_emitir(aj: Ajustes, args) -> None:
     cert = carregar_certificado(aj)
-    emissao, tomador = _emissao_dos_args(aj, args)
+    sefin = nfse.Sefin(cert, _ambiente(args))
+    emissao, tomador = _emissao_dos_args(aj, args, sefin)
     print(_resumo(aj, emissao.ambiente, emissao.serie, emissao.numero, emissao.valor, tomador, emissao.descricao, emissao.competencia))
     # Assina e valida antes de perguntar: se tem erro local, nem chega a pedir confirmação.
     nfse.gerar_dps(aj.cfg, cert, emissao, tomador)
 
     if emissao.ambiente == PRODUCAO:
-        if not sys.stdin.isatty():
-            raise ErroCli("produção exige confirmação no terminal")
-        print("\nIsto emite uma nota fiscal DE VERDADE.")
-        if input("Digite EMITIR para confirmar: ").strip() != "EMITIR":
-            raise ErroCli("cancelado, nada foi enviado")
+        codigo = codigo_confirmacao(aj, emissao, tomador)
+        if args.confirmacao:
+            if args.confirmacao.strip().upper() != codigo:
+                raise ErroCli("o código de confirmação não bate com esta nota (algo mudou desde o `nfse dps`); "
+                              "nada foi enviado. Gere o resumo de novo e confirme outra vez.")
+        elif not sys.stdin.isatty():
+            raise ErroCli("produção exige confirmação: no terminal (digitando EMITIR) ou com --confirmacao, "
+                          "o código que `nfse dps --producao` mostra")
+        else:
+            print("\nIsto emite uma nota fiscal DE VERDADE.")
+            if input("Digite EMITIR para confirmar: ").strip() != "EMITIR":
+                raise ErroCli("cancelado, nada foi enviado")
 
     try:
         r = nfse.emitir(
             aj.cfg, cert, emissao.ambiente, emissao.serie, emissao.numero, emissao.valor,
-            emissao.descricao, tomador, emissao.competencia, emissao.info_complementar,
+            emissao.descricao, tomador, emissao.competencia, emissao.info_complementar, sefin=sefin,
         )
     except nfse.Rejeicao as e:
         print("\nRejeitada pela Sefin:", file=sys.stderr)
@@ -278,6 +334,8 @@ def cmd_emitir(aj: Ajustes, args) -> None:
     print(f"XML:             {pasta / f'{r.chave_acesso}-nfse.xml'}")
     if r.alertas:
         print("Alertas da Sefin:", json.dumps(r.alertas, ensure_ascii=False))
+    if emissao.ambiente == PRODUCAO:
+        print(f"\nPróximos passos: nfse arquivar {r.chave_acesso}   e   nfse email {r.chave_acesso}")
 
 
 def cmd_consultar(aj: Ajustes, args) -> None:
@@ -321,7 +379,7 @@ def montar_parser() -> argparse.ArgumentParser:
 
     def dados_nota(p):
         ambiente(p)
-        p.add_argument("--valor", required=True, help="ex.: 9000 ou 9.000,00")
+        p.add_argument("--valor", help="ex.: 9000 ou 9.000,00 (padrão: o valor recorrente do tomador)")
         p.add_argument("--descricao")
         p.add_argument("--descricao-arquivo", help="arquivo texto com a descrição (aceita várias linhas)")
         p.add_argument("--tomador", help="apelido de um tomador da configuração")
@@ -338,6 +396,7 @@ def montar_parser() -> argparse.ArgumentParser:
     p.add_argument("--saida")
     p = sub.add_parser("emitir", help="emite a NFS-e")
     dados_nota(p)
+    p.add_argument("--confirmacao", help="em produção, o código que `nfse dps --producao` mostrou")
     p = sub.add_parser("consultar", help="consulta se uma DPS virou nota")
     ambiente(p)
     g = p.add_mutually_exclusive_group(required=True)
@@ -355,8 +414,9 @@ def montar_parser() -> argparse.ArgumentParser:
     g.add_argument("--xml", help="gera o PDF de um XML de NFS-e já salvo (sem rede)")
     p.add_argument("--saida")
 
-    from . import configurar  # aqui dentro: configurar importa este módulo
+    from . import configurar, entrega  # aqui dentro: os dois importam este módulo
 
+    COMANDOS.update(entrega.registrar(sub))
     ap.sem_config = configurar.registrar(sub)
     return ap
 

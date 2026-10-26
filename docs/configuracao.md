@@ -58,4 +58,38 @@ respostas):
 | `tot_trib` | Tributos aproximados: `sn` (percentual do Simples), `percentual`, `valor` ou `nao_informado` | Contabilidade |
 | `p_aliq` | Alíquota do ISS; ME/EPP no Simples sem retenção não informa | Prefeitura ou contabilidade |
 
+## Recorrência e entrega
+
+Opcionais, no mesmo rascunho (ou direto no `config.toml`). Dentro de cada cliente:
+
+```json
+"recorrente": {"valor": "9000.00", "descricao": "Consultoria em tecnologia referente a {mes_min}/{ano}."},
+"entrega": {"pasta": "Cliente Exemplo", "para": "fiscal@cliente.com.br", "cc": "", "saudacao": "Olá, Fulana,"}
+```
+
+E, no topo do rascunho, o padrão de todos os clientes:
+
+```json
+"entrega": {"pasta": "~/Documents/NFS-e", "assinatura": "Equipe Exemplo", "email": "outlook"}
+```
+
+| Campo | Padrão | O que faz |
+|---|---|---|
+| `recorrente.valor`, `recorrente.descricao` | | Usados por `nfse dps`/`nfse emitir --tomador <apelido>` sem `--valor`/`--descricao` |
+| `entrega.pasta` (topo) | `~/Documents/NFS-e` | Pasta raiz dos arquivos |
+| `entrega.pasta` (cliente) | o apelido | Subpasta do cliente |
+| `nome_arquivo` | `NFS-e {numero} - {cliente} - {mes} de {ano}` | Nome do XML, do PDF e do `.eml` |
+| `email` | `outlook` no Mac com Outlook, senão `eml` | `outlook`, `eml` ou `nenhum` |
+| `para`, `cc` | | Destinatários, separados por vírgula |
+| `assunto` | `NFS-e nº {numero} - {mes_min}/{ano} - {prestador}` | |
+| `saudacao`, `assinatura`, `corpo` | | Texto do e-mail |
+| `anexar_xml` | `false` | O PDF vai sempre; o XML, só se pedir |
+
+Campos dos textos: `{numero}`, `{valor}`, `{mes}` (Outubro), `{mes_min}` (outubro), `{mes_num}`, `{ano}`,
+`{cliente}`, `{prestador}`, `{chave}`, `{saudacao}`, `{assinatura}`, `{anexos}`. A descrição recorrente usa só
+os do mês.
+
+`salvar` junta seção por seção: um rascunho que só traz o nome do cliente não apaga a recorrência nem a entrega
+dele.
+
 `nfse configurar mostrar` resume a configuração gravada em português.

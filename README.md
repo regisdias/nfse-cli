@@ -27,11 +27,6 @@
 
 </div>
 
-> [!NOTE]
-> **Em desenvolvimento.** A biblioteca, a linha de comando (com a configuração guiada), a Lambda e a geração do
-> PDF já funcionam e emitem notas reais em produção. A skill e o instalador de um comando chegam nas próximas
-> versões; até lá, a instalação é [manual](#instalação-manual).
-
 ## O que atende e o que não atende
 
 Confira antes de instalar. O que está em ❌ a configuração recusa com aviso, em vez de emitir uma nota errada.
@@ -99,8 +94,9 @@ flowchart LR
     F --> G["Prepara o e-mail<br>para você enviar"]
 ```
 
-- **Nada vai para produção sem você confirmar.** Se o valor ou a descrição mudarem em relação ao mês anterior,
-  a skill para e pergunta.
+- **Nada vai para produção sem você confirmar.** O resumo da nota vem com um código, e a emissão só acontece
+  com esse código: se qualquer dado mudar no meio do caminho, a nota não sai. Se o valor ou a descrição
+  mudarem em relação ao mês anterior, a skill para e pergunta.
 - **Se a conexão cair no meio,** ela consulta a Receita antes de tentar de novo, para não emitir a mesma nota
   duas vezes.
 - **O e-mail fica como rascunho, e quem envia é você.** No Mac com Outlook, a skill abre o rascunho pronto, com
@@ -109,7 +105,7 @@ flowchart LR
 ## Funciona com quais agentes
 
 A skill segue o padrão aberto [Agent Skills](https://agentskills.io): um `SKILL.md` com as instruções e os scripts
-ao lado. O mesmo arquivo serve para os três agentes, e o instalador coloca um atalho na pasta de cada um que
+ao lado. O mesmo arquivo serve para os três agentes, e o instalador coloca uma cópia na pasta de cada um que
 encontrar na sua máquina:
 
 | Agente | Pasta da skill |
@@ -123,7 +119,14 @@ Outros agentes que leem `SKILL.md` devem funcionar também.
 
 ## Instalação
 
-O instalador de um comando chega junto com a skill. Para você saber antes de rodar, isto é o que ele instala:
+macOS ou Linux, só no seu usuário, sem sudo:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/regisdias/nfse-cli/main/install.sh | bash
+```
+
+Depois, abra seu agente e peça **"configura minha nota fiscal"**. Para saber antes de rodar, isto é o que o
+instalador faz ([leia o script](install.sh)):
 
 | O quê | Onde | Para quê |
 |---|---|---|
@@ -131,13 +134,20 @@ O instalador de um comando chega junto com a skill. Para você saber antes de ro
 | `lxml` e `cryptography` | dentro desse ambiente | Assinar e validar a nota (as únicas dependências do núcleo) |
 | `reportlab` | dentro desse ambiente | Gerar o PDF da nota |
 | Comando `nfse` | `~/.local/bin/nfse` | A linha de comando, que a skill também usa |
-| Atalho da skill | as pastas da tabela acima | Para o agente encontrar a skill |
-| Sua configuração | `~/.config/nfse-cli/` | Criada pela skill na primeira vez; não sai da sua máquina |
+| A skill | as pastas da tabela acima, dos agentes que existirem | Para o agente encontrar a skill |
+| Sua configuração | `~/.config/nfse-cli/` | Criada na primeira vez que você configura; não sai da sua máquina |
 
-Pré-requisitos: Python 3.11 ou mais novo, e o certificado A1 (`.pfx`) da empresa.
+Pré-requisitos: Python 3.11 ou mais novo e o certificado A1 (`.pfx`) da empresa.
 
-Para desinstalar, apague `~/.local/share/nfse-cli/`, `~/.local/bin/nfse` e os atalhos da skill. A configuração
-em `~/.config/nfse-cli/` continua lá, para o caso de você reinstalar; apague à mão se quiser.
+Para atualizar, rode o mesmo comando. Para desinstalar:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/regisdias/nfse-cli/main/install.sh | bash -s -- --desinstalar
+```
+
+A configuração em `~/.config/nfse-cli/` continua lá, para o caso de você reinstalar; apague à mão se quiser.
+
+Windows: por enquanto, instalação manual (abaixo), com a senha na variável `NFSE_CERT_SENHA`.
 
 ### Instalação manual
 
@@ -172,8 +182,9 @@ O certificado A1 assina notas em nome da empresa, e o projeto é construído em 
   Manager. A chave privada fica em memória; ela só passa pelo disco cifrada e por instantes, porque o TLS do
   Python só aceita certificado de cliente vindo de arquivo.
 - **Os logs nunca têm XML, dados do cliente nem senha.**
-- **Homologação é o padrão.** Produção exige pedido explícito e confirmação digitada (na Lambda, liberação na
-  própria função).
+- **Homologação é o padrão.** Produção exige pedido explícito e confirmação: digitada no terminal, ou o código
+  do resumo que você aprovou (na Lambda, liberação na própria função).
+- **O agente nunca vê a senha.** `nfse configurar certificado` só roda num terminal interativo, onde você digita.
 - **Só conversa com a Receita.** As conexões são apenas com os servidores da Sefin Nacional.
 
 Achou uma falha? Veja [SECURITY.md](SECURITY.md).
@@ -188,11 +199,17 @@ nfse configurar mostrar                            # a configuração atual, em 
 nfse servico consultoria informática               # procura o código de tributação nacional
 nfse nbs assessoria empresarial                    # procura o código NBS
 nfse municipio itajai sc                           # procura o código IBGE do município
+nfse skill instalar                                # copia a skill para os agentes instalados
 
 nfse certificado                                   # titular, CNPJ e validade do certificado
 nfse dps --tomador cliente --valor 9000 --descricao-arquivo desc.txt   # monta e valida, não envia
 nfse emitir --tomador cliente --valor 9000 --descricao-arquivo desc.txt             # homologação
-nfse emitir --producao --tomador cliente --valor 9000 --descricao-arquivo desc.txt  # produção
+nfse emitir --producao --tomador cliente --valor 9000 --descricao-arquivo desc.txt  # produção (pede EMITIR)
+nfse dps --producao --tomador cliente              # resumo com código de confirmação, sem enviar
+nfse emitir --producao --tomador cliente --confirmacao A1B2C3   # emite só se nada mudou desde o resumo
+nfse notas --tomador cliente                       # notas já emitidas; diz se o mês já tem nota
+nfse arquivar <chave de acesso>                    # XML e PDF na pasta do cliente
+nfse email <chave de acesso>                       # rascunho do e-mail com o PDF (Outlook no Mac, ou .eml)
 nfse consultar --numero 3                          # essa DPS virou nota?
 nfse consultar --serie 70000 --numero 3            # idem, para uma nota do Emissor Web
 nfse baixar <chave de acesso>                      # XML da nota
@@ -200,8 +217,10 @@ nfse danfse <chave de acesso>                      # PDF da nota
 nfse danfse --xml nota.xml                         # PDF de um XML salvo, sem internet
 ```
 
-A numeração da DPS fica em `~/.config/nfse-cli/numeracao.json` e só avança depois que a nota sai. A série padrão
-é 1. O Emissor Web do governo usa 70000 em diante, então as duas numerações não se cruzam.
+Sem `--valor` e `--descricao`, valem os do cliente em `[tomadores.<apelido>.recorrente]`; a descrição aceita
+`{mes}`, `{mes_min}` e `{ano}`. A numeração da DPS fica em `~/.config/nfse-cli/numeracao.json`, só avança depois
+que a nota sai e é conferida na Sefin antes de usar (um número que já virou nota é pulado). A série padrão é 1;
+o Emissor Web do governo usa 70000 em diante, então as duas numerações não se cruzam.
 
 ## Biblioteca Python
 

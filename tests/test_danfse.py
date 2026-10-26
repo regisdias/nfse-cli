@@ -68,3 +68,8 @@ def test_formatos_do_danfse():
     assert _dinheiro(None) == "-"
     assert municipio("3550308") == ("São Paulo", "SP")
     assert municipio("9999999") is None
+
+
+def test_mesmo_xml_mesmo_pdf(cfg, cert, emissao, tomador):
+    xml = nfse_de_teste(gerar_dps(cfg, cert, emissao, tomador).xml)
+    assert gerar_danfse(xml) == gerar_danfse(xml)

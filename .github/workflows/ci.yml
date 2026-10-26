@@ -56,3 +56,31 @@ jobs:
           python lambda/empacotar.py
           segundo=$(sha256sum dist/nfse-lambda-arm64-py3.13.zip | cut -d' ' -f1)
           test "$primeiro" = "$segundo" || { echo "zip mudou entre dois builds iguais"; exit 1; }
+
+  instalador:
+    name: Instalador (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - if: runner.os == 'Linux'
+        run: shellcheck --severity=warning install.sh
+      - name: Instala num HOME vazio, confere a skill e desinstala
+        run: |
+          casa=$(mktemp -d)
+          mkdir -p "$casa/.claude" "$casa/.codex"
+          HOME="$casa" NFSE_ORIGEM="file://$PWD" bash install.sh
+          "$casa/.local/bin/nfse" --versao
+          "$casa/.local/bin/nfse" servico consultoria
+          test -f "$casa/.claude/skills/nfse/SKILL.md"
+          test -f "$casa/.agents/skills/nfse/SKILL.md"
+          test ! -e "$casa/.gemini"
+          HOME="$casa" bash install.sh --desinstalar
+          test ! -e "$casa/.claude/skills/nfse"
+          test ! -e "$casa/.local/bin/nfse"

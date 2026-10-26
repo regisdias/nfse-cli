@@ -128,3 +128,36 @@ def test_buscas(capsys):
 def test_para_toml_le_de_volta():
     dados = {"a": "texto \"com\" aspas\ne quebra", "b": 3, "c": {"d": "ç", "e": {"f": True}}, "chave com espaço": {"x": 1}}
     assert tomllib.loads(para_toml(dados)) == dados
+
+
+def test_salvar_preserva_recorrencia_e_entrega_do_cliente(pasta, nota):
+    config = pasta / "config.toml"
+    rascunho = rascunho_do_modelo(ler_nfse(nota), "cliente")
+    assert rascunho["tomadores"]["cliente"]["recorrente"]["valor"] == "9000.00"
+    rascunho["tomadores"]["cliente"]["entrega"] = {"para": "fiscal@cliente.com.br"}
+    rascunho["entrega"] = {"pasta": "~/NFS-e"}
+    (pasta / "r.json").write_text(json.dumps(rascunho))
+    assert nfse("--config", str(config), "configurar", "salvar", str(pasta / "r.json")) == 0
+
+    # Atualiza só o nome: recorrência, entrega e [entrega] continuam.
+    so_nome = {"config": rascunho["config"], "tomadores": {"cliente": {"documento": "11444777000161", "nome": "NOVO NOME LTDA"}}}
+    (pasta / "r.json").write_text(json.dumps(so_nome))
+    assert nfse("--config", str(config), "configurar", "salvar", str(pasta / "r.json")) == 0
+    d = tomllib.loads(config.read_text())
+    cliente = d["tomadores"]["cliente"]
+    assert cliente["nome"] == "NOVO NOME LTDA" and cliente["recorrente"]["valor"] == "9000.00"
+    assert cliente["entrega"]["para"] == "fiscal@cliente.com.br" and d["entrega"]["pasta"] == "~/NFS-e"
+
+
+def test_skill_instalar_e_remover(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
+    (tmp_path / ".claude").mkdir()
+    (tmp_path / ".gemini" / "config" / "skills" / "nfse").mkdir(parents=True)  # de outra pessoa: não mexe
+    assert nfse("skill", "instalar") == 0
+    assert (tmp_path / ".claude" / "skills" / "nfse" / "SKILL.md").read_text().startswith("---\nname: nfse")
+    assert not (tmp_path / ".agents").exists()  # sem Codex instalado
+    assert "não é desta instalação" in capsys.readouterr().out
+    assert nfse("skill", "instalar") == 0  # de novo: atualiza
+    assert nfse("skill", "remover") == 0
+    assert not (tmp_path / ".claude" / "skills" / "nfse").exists()
+    assert (tmp_path / ".gemini" / "config" / "skills" / "nfse").exists()

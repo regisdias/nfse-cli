@@ -125,7 +125,8 @@ def _apelido(nome: str) -> str:
 def rascunho_do_modelo(m: Modelo, apelido: str | None = None) -> dict:
     rascunho = {"config": m.config, "tomadores": {}}
     if m.tomador:
-        rascunho["tomadores"][apelido or _apelido(m.tomador["nome"])] = m.tomador
+        recorrente = {"valor": m.valor, "descricao": m.descricao} if m.valor else {}
+        rascunho["tomadores"][apelido or _apelido(m.tomador["nome"])] = {**m.tomador, "recorrente": recorrente}
     rascunho["modelo"] = {
         "chave": m.chave, "numero_nfse": m.numero_nfse, "emitida_em": m.emitida_em, "ambiente": m.ambiente,
         "prestador_nome": m.prestador_nome, "valor": m.valor, "descricao": m.descricao,
@@ -230,6 +231,22 @@ def para_toml(dados: dict, prefixo: str = "") -> str:
     return "\n\n".join(blocos)
 
 
+def _juntar_tomadores(atuais: dict, novos: dict) -> dict:
+    """Cliente novo entra inteiro; cliente que já existe é atualizado seção por seção (recorrente e entrega
+    que o rascunho não traz continuam como estavam)."""
+    saida = {k: dict(v) for k, v in atuais.items()}
+    for apelido, dados in novos.items():
+        atual = saida.get(apelido, {})
+        junto = {**atual, **dados}
+        for secao in ("recorrente", "entrega"):
+            if isinstance(atual.get(secao), dict) or isinstance(dados.get(secao), dict):
+                junto[secao] = {**atual.get(secao, {}), **dados.get(secao, {})}
+                if not junto[secao]:
+                    del junto[secao]
+        saida[apelido] = junto
+    return saida
+
+
 def cmd_salvar(args) -> None:
     origem = Path(args.rascunho).expanduser()
     rascunho = json.loads(origem.read_text(encoding="utf-8"))
@@ -248,8 +265,11 @@ def cmd_salvar(args) -> None:
         "certificado": atual.get("certificado") or {"arquivo": "certificado.pfx"},
         "prestador": rascunho["config"]["prestador"],
         "servico": rascunho["config"]["servico"],
-        "tomadores": {**(atual.get("tomadores", {}) if cnpj_atual == cnpj_novo else {}), **rascunho.get("tomadores", {})},
+        "tomadores": _juntar_tomadores(atual.get("tomadores", {}) if cnpj_atual == cnpj_novo else {},
+                                       rascunho.get("tomadores", {})),
     }
+    if atual.get("entrega") or rascunho.get("entrega"):
+        novo["entrega"] = {**atual.get("entrega", {}), **rascunho.get("entrega", {})}
     novo.update({k: v for k, v in atual.items() if k not in novo})
     texto = ("# Gerado por `nfse configurar salvar`. A senha do certificado não fica aqui.\n\n"
              + para_toml(novo) + "\n")
@@ -337,6 +357,12 @@ def descrever(rascunho: dict) -> str:
                           f"{_municipio(e.get('cod_municipio'))}, CEP {_cep(str(e.get('cep')))}")
         if tom.get("email"):
             linhas.append(f"  e-mail: {tom['email']}")
+        rec = tom.get("recorrente") or {}
+        if rec.get("valor"):
+            linhas.append(f"  Todo mês: {_dinheiro(str(rec['valor']))}" + (f", \"{rec['descricao'].splitlines()[0][:70]}\"" if rec.get("descricao") else ""))
+        ent = tom.get("entrega") or {}
+        if ent.get("para"):
+            linhas.append(f"  Enviar para: {ent['para']}" + (f" (cópia: {ent['cc']})" if ent.get("cc") else ""))
     if modelo:
         quando = (modelo.get("emitida_em") or "")[:10]
         if quando:
@@ -399,10 +425,55 @@ def registrar(sub) -> dict:
                         ("nbs", "procura o código NBS")]:
         p = sub.add_parser(nome, help=ajuda)
         p.add_argument("termo", nargs="+")
+    p = sub.add_parser("skill", help="instala ou remove a skill nos agentes (Claude Code, Codex, Antigravity)")
+    p.add_argument("acao", choices=["instalar", "remover"])
+    p.add_argument("--todos", action="store_true", help="instala também em agente que não parece instalado")
     etapas = {"certificado": cmd_certificado, "modelo": cmd_modelo, "salvar": cmd_salvar, "mostrar": cmd_mostrar}
     return {
         "configurar": lambda args: etapas[args.etapa](args),
         "municipio": cmd_municipio,
         "servico": cmd_servico,
         "nbs": cmd_nbs,
+        "skill": cmd_skill,
     }
+
+
+# --- skill para agentes ---------------------------------------------------------------------
+
+ORIGEM_SKILL = Path(__file__).parent / "skill"
+MARCA_SKILL = ".instalado-pelo-nfse-cli"
+
+
+def destinos_skill() -> dict[str, tuple[Path, Path]]:
+    """Agente -> (pasta que indica que ele está instalado, pasta da skill). Padrão aberto Agent Skills."""
+    casa = Path.home()
+    return {
+        "Claude Code": (casa / ".claude", casa / ".claude" / "skills" / "nfse"),
+        "Codex": (casa / ".codex", casa / ".agents" / "skills" / "nfse"),
+        "Antigravity": (casa / ".gemini", casa / ".gemini" / "config" / "skills" / "nfse"),
+    }
+
+
+def cmd_skill(args) -> None:
+    feitos = []
+    for agente, (indicio, destino) in destinos_skill().items():
+        if args.acao == "remover":
+            if (destino / MARCA_SKILL).exists():
+                shutil.rmtree(destino)
+                feitos.append(f"{agente}: removida de {destino}")
+            continue
+        if not indicio.exists() and not args.todos:
+            continue
+        if destino.exists() and not (destino / MARCA_SKILL).exists():
+            feitos.append(f"{agente}: {destino} já existe e não é desta instalação; não mexi")
+            continue
+        if destino.exists():
+            shutil.rmtree(destino)
+        shutil.copytree(ORIGEM_SKILL, destino, ignore=shutil.ignore_patterns("__pycache__"))
+        (destino / MARCA_SKILL).write_text(f"nfse-cli {nfse.__version__}\n")
+        feitos.append(f"{agente}: {destino}")
+    if not feitos:
+        print("Nenhum agente encontrado (Claude Code, Codex ou Antigravity). Use --todos para instalar mesmo assim."
+              if args.acao == "instalar" else "Nada para remover.")
+    for linha in feitos:
+        print(linha)

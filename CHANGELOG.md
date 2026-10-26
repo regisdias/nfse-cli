@@ -5,6 +5,13 @@ Formato de [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões
 ## [Não lançado]
 
 ### Adicionado
+- Skill `nfse` para Claude Code, Codex e Antigravity (padrão Agent Skills), com configuração guiada e emissão
+  mensal; `nfse skill instalar|remover`.
+- `install.sh`: instalação de um comando, só no usuário, e desinstalação.
+- `nfse notas`, `nfse arquivar` e `nfse email`: notas já emitidas, XML e PDF na pasta do cliente, rascunho do
+  e-mail (Outlook no Mac ou `.eml`).
+- Valor e descrição recorrentes por cliente (`[tomadores.<apelido>.recorrente]`), com `{mes}` e `{ano}`.
+- Código de confirmação para produção: `nfse dps --producao` mostra, `nfse emitir --confirmacao` exige.
 - `nfse configurar`: certificado (senha direto no Keychain), nota modelo pelo XML, PDF ou chave de acesso, e
   salvar com validação nos esquemas oficiais. Recusa o que ainda não sabe emitir.
 - `nfse servico`, `nfse nbs` e `nfse municipio`: busca nas tabelas oficiais (Anexo B e IBGE), embutidas no pacote.
@@ -15,6 +22,9 @@ Formato de [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões
 - `nfse consultar --serie`, para notas do Emissor Web.
 
 ### Corrigido
+- O número da DPS é conferido na Sefin antes de usar: com a numeração local perdida, a Sefin devolveria a nota
+  antiga no lugar da nova.
+- O mesmo XML gera sempre o mesmo PDF (antes, a data de criação mudava o arquivo).
 - Senha com acento guardada no Keychain: o `security` devolve em hexadecimal e agora é reconhecida.
 
 ## [0.1.0]

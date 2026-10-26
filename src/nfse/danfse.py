@@ -519,7 +519,8 @@ def gerar_danfse(xml_nfse: bytes) -> bytes:
 
     nota = _Nota(xml_nfse)
     saida = io.BytesIO()
-    c = canvas.Canvas(saida, pagesize=A4, pageCompression=1)
+    # invariant: sem data de criação nem id aleatório, o mesmo XML gera sempre o mesmo PDF.
+    c = canvas.Canvas(saida, pagesize=A4, pageCompression=1, invariant=1)
     chave = (nota.inf.get("Id") or "").removeprefix("NFS")
     c.setTitle(f"DANFSe {nota('nNFSe') or ''} - {chave}")
     c.setCreator("nfse-cli")
