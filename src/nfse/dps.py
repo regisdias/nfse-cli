@@ -3,6 +3,9 @@
 A ordem dos elementos segue a sequência do XSD oficial (`esquemas/`).
 Só cobre o caso de emissão pelo próprio prestador (tpEmit = 1), com
 serviço prestado no Brasil; o resto do leiaute entra quando for preciso.
+
+O leiaute continua se chamando "1.01", mas o conteúdo mudou com a NT 009:
+cada pacote oficial de esquemas fica numa pasta com a data de publicação.
 """
 
 from __future__ import annotations
@@ -20,6 +23,18 @@ FUSO_BRASILIA = timezone(timedelta(hours=-3))
 
 PRODUCAO = 1
 HOMOLOGACAO = 2
+
+# Pacotes de esquemas (pasta em esquemas/), pela data de publicação.
+LEIAUTE_ANTERIOR = "20260209"
+"""Pacote 1.01 de 09/02/2026: o que a produção aceita até a virada da NT 009."""
+LEIAUTE_NT009 = "20261020"
+"""Pacote da produção restrita de 20/10/2026 (NT 009): finNFSe obrigatório
+logo depois de tpEmit e cNBS antes de xDescServ."""
+LEIAUTES = (LEIAUTE_ANTERIOR, LEIAUTE_NT009)
+
+# Produção restrita já está na NT 009; a produção vira depois (data a confirmar
+# no portal). Na virada, basta trocar a produção para LEIAUTE_NT009.
+LEIAUTE_POR_AMBIENTE = {PRODUCAO: LEIAUTE_ANTERIOR, HOMOLOGACAO: LEIAUTE_NT009}
 
 
 class DadosInvalidos(ValueError):
@@ -120,6 +135,12 @@ class Emissao:
     emitida_em: datetime | None = None
     info_complementar: str | None = None
     ver_aplic: str = "nfse-cli"
+    leiaute: str | None = None
+    """Pacote de esquemas (LEIAUTES); None usa o do ambiente (LEIAUTE_POR_AMBIENTE)."""
+
+    @property
+    def leiaute_efetivo(self) -> str:
+        return self.leiaute or LEIAUTE_POR_AMBIENTE[self.ambiente]
 
 
 # --- formatação ------------------------------------------------------------
@@ -198,6 +219,9 @@ def montar_dps(prestador: Prestador, servico: Servico, tomador: Tomador | None, 
     """Monta o elemento <DPS> ainda sem assinatura."""
     if emissao.ambiente not in (PRODUCAO, HOMOLOGACAO):
         raise DadosInvalidos(f"ambiente inválido: {emissao.ambiente}")
+    leiaute = emissao.leiaute_efetivo
+    if leiaute not in LEIAUTES:
+        raise DadosInvalidos(f"leiaute desconhecido: {leiaute} (conhecidos: {', '.join(LEIAUTES)})")
     if not 1 <= int(emissao.serie) <= 49999:
         raise DadosInvalidos("série de aplicativo próprio vai de 1 a 49999 (E0010)")
     if not 1 <= emissao.numero < 10**15:
@@ -223,6 +247,8 @@ def montar_dps(prestador: Prestador, servico: Servico, tomador: Tomador | None, 
     _el(inf, "nDPS", str(emissao.numero))
     _el(inf, "dCompet", competencia.isoformat())
     _el(inf, "tpEmit", "1")
+    if leiaute == LEIAUTE_NT009:
+        _el(inf, "finNFSe", "0")  # NFS-e regular (1 e 2 são notas de ajuste de IBS/CBS)
     _el(inf, "cLocEmi", digitos(prestador.cod_municipio, "município do prestador", (7,)))
 
     # Prestador emitente: sem xNome (E0121) e sem endereço (vem do cadastro).
@@ -271,9 +297,13 @@ def montar_dps(prestador: Prestador, servico: Servico, tomador: Tomador | None, 
     _el(cserv, "cTribNac", digitos(servico.c_trib_nac, "cTribNac", (6,)))
     if servico.c_trib_mun:
         _el(cserv, "cTribMun", digitos(servico.c_trib_mun, "cTribMun", (3,)))
-    _el(cserv, "xDescServ", texto(emissao.descricao, "descrição do serviço", 2000, multilinha=True))
+    descricao = texto(emissao.descricao, "descrição do serviço", 2000, multilinha=True)
+    if leiaute == LEIAUTE_ANTERIOR:
+        _el(cserv, "xDescServ", descricao)
     if servico.c_nbs:
         _el(cserv, "cNBS", digitos(servico.c_nbs, "cNBS", (9,)))
+    if leiaute == LEIAUTE_NT009:
+        _el(cserv, "xDescServ", descricao)
     if emissao.info_complementar:
         compl = _el(serv, "infoCompl")
         _el(compl, "xInfComp", texto(emissao.info_complementar, "informação complementar", 2000))

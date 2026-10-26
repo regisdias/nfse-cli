@@ -47,7 +47,7 @@ def gerar_dps(cfg: Config, cert: Certificado, emissao: Emissao, tomador: Tomador
     assinar(raiz, cert, algoritmo)
     xml = serializar(raiz)
     verificar(xml)
-    validar_dps(xml)
+    validar_dps(xml, emissao.leiaute_efetivo)
     return DpsAssinada(id=raiz.find(f"{{{NS}}}infDPS").get("Id"), xml=xml)
 
 

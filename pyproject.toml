@@ -24,7 +24,7 @@ nfse = "nfse_cli.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-nfse = ["esquemas/*.xsd"]
+nfse = ["esquemas/*/*.xsd"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

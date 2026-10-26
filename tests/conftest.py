@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import BestAvailableEncryption, pkcs12
 from cryptography.x509.oid import NameOID
 
-from nfse import HOMOLOGACAO, Certificado, Config, Emissao, Prestador, Servico, Tomador, TotTrib
+from nfse import HOMOLOGACAO, LEIAUTES, Certificado, Config, Emissao, Prestador, Servico, Tomador, TotTrib
 from nfse.certificado import OID_CNPJ
 
 CNPJ = "11222333000181"
@@ -71,10 +71,12 @@ def tomador() -> Tomador:
     return Tomador(documento="11444777000161", nome="CLIENTE TESTE LTDA", email="fiscal@cliente.com.br")
 
 
-@pytest.fixture
-def emissao() -> Emissao:
+@pytest.fixture(params=LEIAUTES)
+def emissao(request) -> Emissao:
+    """Uma vez para cada pacote de esquemas: todo teste de DPS roda nos dois."""
     return Emissao(
         ambiente=HOMOLOGACAO,
+        leiaute=request.param,
         serie="1",
         numero=1,
         valor=Decimal("9000"),

@@ -214,7 +214,7 @@ def _descricao(args) -> str:
 def _resumo(aj: Ajustes, ambiente: int, serie: str, numero: int, valor: Decimal, tomador, descricao: str, competencia) -> str:
     p, s = aj.cfg.prestador, aj.cfg.servico
     linhas = [
-        f"Ambiente:    {NOMES_AMBIENTE[ambiente].upper()}",
+        f"Ambiente:    {NOMES_AMBIENTE[ambiente].upper()} (esquemas {nfse.LEIAUTE_POR_AMBIENTE[ambiente]})",
         f"Prestador:   {p.cnpj} (município {p.cod_municipio})",
         f"Tomador:     {f'{tomador.nome} ({tomador.documento})' if tomador else '(sem tomador)'}",
         f"Serviço:     {s.c_trib_nac}" + (f" / NBS {s.c_nbs}" if s.c_nbs else ""),

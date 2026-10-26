@@ -66,9 +66,14 @@ Erros da Sefin (`E0xxx`) viram `nfse.Rejeicao` e não adianta tentar de novo; re
   calcula (E0714). `assinatura._c14n` canonicaliza uma cópia do elemento como raiz, e
   `test_c14n_confere_com_implementacao_independente` confere contra o `canonicalize` em Python puro da stdlib.
 - **Prefixo de namespace é rejeitado** (E1228): `Signature`, nunca `ds:Signature`.
-- **XSD oficial com `^...$` na série.** Em regex de XSD, `^` e `$` são literais; o libxml2 recusaria toda série.
-  A cópia em `src/nfse/esquemas/` tira os dois (comentado no arquivo). O resto dos esquemas é o pacote oficial
-  v1.01 de 09/02/2026, sem alteração.
+- **Dois leiautes com o mesmo nome "1.01".** A NT 009 mudou o conteúdo sem mudar a versão: `finNFSe` passou a
+  ser obrigatório logo depois de `tpEmit`, e `cNBS` foi para antes de `xDescServ`. A produção restrita já está
+  nela (pacote de 20/10/2026); a produção, não. Cada pacote oficial fica em `src/nfse/esquemas/<data>/` e
+  `nfse.LEIAUTE_POR_AMBIENTE` diz qual cada ambiente usa. Na virada da produção, trocar ali. Sinal de que virou:
+  rejeição `E1235` falando de `finNFSe`.
+- **XSD de 09/02/2026 com `^...$` na série.** Em regex de XSD, `^` e `$` são literais; o libxml2 recusaria toda
+  série. A cópia em `esquemas/20260209/` tira os dois (comentado no arquivo). O pacote de 20/10/2026 já corrigiu
+  e está sem alteração.
 - **Texto só até U+00FF.** Travessão (—) e aspas curvas reprovam no esquema; a biblioteca recusa antes, com a
   lista dos caracteres.
 - **Série de aplicativo próprio: 1 a 49999** (E0010). O Emissor Web usa 70000+, então a numeração daqui não

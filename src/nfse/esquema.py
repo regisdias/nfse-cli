@@ -1,4 +1,4 @@
-"""Validação contra os XSD oficiais (leiaute 1.01), empacotados em `esquemas/`."""
+"""Validação contra os XSD oficiais, um pacote por pasta em `esquemas/<data>/`."""
 
 from __future__ import annotations
 
@@ -17,12 +17,13 @@ class EsquemaInvalido(ValueError):
 
 
 @cache
-def _esquema(nome: str) -> etree.XMLSchema:
+def _esquema(leiaute: str, nome: str) -> etree.XMLSchema:
     parser = etree.XMLParser(no_network=True, resolve_entities=False, load_dtd=False)
-    return etree.XMLSchema(etree.parse(str(PASTA / nome), parser))
+    return etree.XMLSchema(etree.parse(str(PASTA / leiaute / nome), parser))
 
 
-def validar_dps(xml: bytes) -> None:
-    esquema = _esquema("DPS_v1.01.xsd")
+def validar_dps(xml: bytes, leiaute: str) -> None:
+    """`leiaute` é um de `nfse.LEIAUTES` (o mesmo usado para montar a DPS)."""
+    esquema = _esquema(leiaute, "DPS_v1.01.xsd")
     if not esquema.validate(etree.fromstring(xml)):
         raise EsquemaInvalido([f"linha {e.line}: {e.message}" for e in esquema.error_log])

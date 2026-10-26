@@ -8,8 +8,14 @@ from lxml import etree
 
 from nfse import (
     AssinaturaInvalida,
+    HOMOLOGACAO,
+    LEIAUTE_ANTERIOR,
+    LEIAUTE_NT009,
+    LEIAUTES,
+    PRODUCAO,
     DadosInvalidos,
     Endereco,
+    EsquemaInvalido,
     Prestador,
     TotTrib,
     gerar_dps,
@@ -44,7 +50,7 @@ def test_formatos():
 
 def test_dps_assinada_passa_no_xsd_e_na_assinatura(cfg, cert, emissao, tomador):
     dps = gerar_dps(cfg, cert, emissao, tomador)
-    validar_dps(dps.xml)
+    validar_dps(dps.xml, emissao.leiaute_efetivo)
     assert verificar(dps.xml).serial_number == cert.cert.serial_number
     assert dps.xml.startswith(b"<?xml version='1.0' encoding='UTF-8'?>")
     # Sem prefixo de namespace em lugar nenhum (E1228)
@@ -125,16 +131,16 @@ def test_alterar_um_byte_quebra_a_assinatura(cfg, cert, emissao, tomador):
 
 def test_tomador_com_endereco_passa_no_xsd(cfg, cert, emissao, tomador):
     end = Endereco(cod_municipio="3304557", cep="20010000", logradouro="Rua X", numero="100", bairro="Centro", complemento="Sala 2")
-    validar_dps(gerar_dps(cfg, cert, emissao, replace(tomador, endereco=end)).xml)
+    validar_dps(gerar_dps(cfg, cert, emissao, replace(tomador, endereco=end)).xml, emissao.leiaute_efetivo)
 
 
 def test_sem_tomador_passa_no_xsd(cfg, cert, emissao):
-    validar_dps(gerar_dps(cfg, cert, emissao, None).xml)
+    validar_dps(gerar_dps(cfg, cert, emissao, None).xml, emissao.leiaute_efetivo)
 
 
 @pytest.mark.parametrize("tot", [TotTrib.percentual("0", "0", "2"), TotTrib.valor("100", "0", "0")])
 def test_outros_modos_de_tot_trib(cfg, cert, emissao, tot):
-    validar_dps(gerar_dps(replace(cfg, servico=replace(cfg.servico, tot_trib=tot)), cert, emissao, None).xml)
+    validar_dps(gerar_dps(replace(cfg, servico=replace(cfg.servico, tot_trib=tot)), cert, emissao, None).xml, emissao.leiaute_efetivo)
 
 
 def test_travessao_na_descricao_e_rejeitado(prestador, servico, emissao):
@@ -167,3 +173,36 @@ def test_emissao_um_minuto_no_passado(prestador, servico, emissao):
     antes = datetime.now(timezone.utc)
     dh = montar_dps(prestador, servico, None, emissao).findtext(f".//{{{NS}}}dhEmi")
     assert datetime.fromisoformat(dh) < antes
+
+
+def _ordem(xml: bytes, caminho: str) -> list[str]:
+    return [etree.QName(f).localname for f in etree.fromstring(xml).find(caminho, {"n": NS})]
+
+
+def test_ordem_de_cada_leiaute(cfg, cert, emissao, tomador):
+    xml = gerar_dps(cfg, cert, emissao, tomador).xml
+    inicio = _ordem(xml, "n:infDPS")[:10]
+    cserv = _ordem(xml, "n:infDPS/n:serv/n:cServ")
+    if emissao.leiaute == LEIAUTE_NT009:
+        assert inicio[6:9] == ["tpEmit", "finNFSe", "cLocEmi"]
+        assert cserv == ["cTribNac", "cNBS", "xDescServ"]
+    else:
+        assert inicio[6:8] == ["tpEmit", "cLocEmi"]
+        assert cserv == ["cTribNac", "xDescServ", "cNBS"]
+
+
+def test_dps_de_um_leiaute_nao_passa_no_outro(cfg, cert, emissao, tomador):
+    xml = gerar_dps(cfg, cert, emissao, tomador).xml
+    outro = next(l for l in LEIAUTES if l != emissao.leiaute)
+    with pytest.raises(EsquemaInvalido):
+        validar_dps(xml, outro)
+
+
+def test_leiaute_padrao_por_ambiente(emissao):
+    assert replace(emissao, leiaute=None, ambiente=HOMOLOGACAO).leiaute_efetivo == LEIAUTE_NT009
+    assert replace(emissao, leiaute=None, ambiente=PRODUCAO).leiaute_efetivo == LEIAUTE_ANTERIOR
+
+
+def test_leiaute_desconhecido(prestador, servico, emissao):
+    with pytest.raises(DadosInvalidos, match="leiaute"):
+        montar_dps(prestador, servico, None, replace(emissao, leiaute="20990101"))

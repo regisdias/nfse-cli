@@ -8,6 +8,10 @@ from .assinatura import AssinaturaInvalida, assinar, verificar
 from .certificado import Certificado, CertificadoInvalido
 from .dps import (
     HOMOLOGACAO,
+    LEIAUTE_ANTERIOR,
+    LEIAUTE_NT009,
+    LEIAUTE_POR_AMBIENTE,
+    LEIAUTES,
     PRODUCAO,
     DadosInvalidos,
     Emissao,
@@ -27,6 +31,7 @@ __version__ = "0.1.0"
 
 __all__ = [
     "HOMOLOGACAO", "PRODUCAO",
+    "LEIAUTES", "LEIAUTE_ANTERIOR", "LEIAUTE_NT009", "LEIAUTE_POR_AMBIENTE",
     "AssinaturaInvalida", "CertificadoInvalido", "DadosInvalidos", "EsquemaInvalido",
     "FalhaComunicacao", "Rejeicao", "Erro",
     "Certificado", "Config", "DpsAssinada", "Emissao", "Endereco", "Prestador",
