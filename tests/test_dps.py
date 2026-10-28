@@ -17,6 +17,7 @@ from nfse import (
     Endereco,
     EsquemaInvalido,
     IbsCbs,
+    Irrf,
     PisCofins,
     Prestador,
     TotTrib,
@@ -250,3 +251,41 @@ def test_ibs_cbs_codigos_invalidos(cfg_presumido, emissao, campo, valor):
     ibs = replace(cfg_presumido.servico.ibs_cbs, **{campo: valor})
     with pytest.raises(DadosInvalidos, match="IBS/CBS"):
         montar_dps(cfg_presumido.prestador, replace(cfg_presumido.servico, ibs_cbs=ibs), None, emissao)
+
+
+# --- IRRF retido -----------------------------------------------------------------------------------
+
+
+def _com_irrf(cfg, p_aliq="1.50"):
+    return replace(cfg, servico=replace(cfg.servico, irrf=Irrf(p_aliq=Decimal(p_aliq))))
+
+
+def test_irrf_retido_vem_depois_do_pis_cofins(cfg_presumido, cert, emissao):
+    xml = gerar_dps(_com_irrf(cfg_presumido), cert, replace(emissao, valor=Decimal("1000")), None).xml
+    validar_dps(xml, emissao.leiaute_efetivo)
+    assert _ordem(xml, "n:infDPS/n:valores/n:trib/n:tribFed") == ["piscofins", "vRetIRRF"]
+    assert etree.fromstring(xml).findtext(".//n:vRetIRRF", namespaces={"n": NS}) == "15.00"
+
+
+def test_irrf_sem_pis_cofins_cria_o_grupo_federal(cfg, cert, emissao):
+    xml = gerar_dps(_com_irrf(cfg), cert, emissao, None).xml
+    validar_dps(xml, emissao.leiaute_efetivo)
+    assert _ordem(xml, "n:infDPS/n:valores/n:trib/n:tribFed") == ["vRetIRRF"]
+
+
+# Lei 9.430/1996, art. 67: dispensada a retenção de IR de valor igual ou inferior a R$ 10,00.
+@pytest.mark.parametrize("valor, retido", [
+    ("157.33", None),       # 2,36
+    ("666.67", None),       # 10,00: igual ao mínimo, dispensado
+    ("667.00", "10.01"),    # 10,005 arredonda para 10,01
+    ("9000", "135.00"),
+])
+def test_irrf_dispensado_ate_dez_reais(cfg_presumido, cert, emissao, valor, retido):
+    xml = gerar_dps(_com_irrf(cfg_presumido), cert, replace(emissao, valor=Decimal(valor)), None).xml
+    assert etree.fromstring(xml).findtext(".//n:vRetIRRF", namespaces={"n": NS}) == retido
+
+
+def test_irrf_dispensado_sem_pis_cofins_nao_deixa_grupo_vazio(cfg, cert, emissao):
+    xml = gerar_dps(_com_irrf(cfg), cert, replace(emissao, valor=Decimal("100")), None).xml
+    validar_dps(xml, emissao.leiaute_efetivo)
+    assert etree.fromstring(xml).find(".//n:tribFed", namespaces={"n": NS}) is None

@@ -11,6 +11,7 @@ import base64
 import re
 import zlib
 from dataclasses import dataclass, field
+from decimal import Decimal
 
 from lxml import etree
 
@@ -37,7 +38,7 @@ SUPORTADOS = {
     "valores/trib/tribFed/piscofins/CST", "valores/trib/tribFed/piscofins/vBCPisCofins",
     "valores/trib/tribFed/piscofins/pAliqPis", "valores/trib/tribFed/piscofins/pAliqCofins",
     "valores/trib/tribFed/piscofins/vPis", "valores/trib/tribFed/piscofins/vCofins",
-    "valores/trib/tribFed/piscofins/tpRetPisCofins",
+    "valores/trib/tribFed/piscofins/tpRetPisCofins", "valores/trib/tribFed/vRetIRRF",
     "IBSCBS/finNFSe", "IBSCBS/indFinal", "IBSCBS/cIndOp", "IBSCBS/indDest",
     "IBSCBS/valores/trib/gIBSCBS/CST", "IBSCBS/valores/trib/gIBSCBS/cClassTrib",  # até a NT 009
     "IBSCBS/valores/trib/CST", "IBSCBS/valores/trib/cClassTrib",  # NT 009
@@ -174,6 +175,10 @@ def ler_nfse(xml: bytes) -> Modelo:
                                                    (("federal", "Fed"), ("estadual", "Est"), ("municipal", "Mun"))}}
     else:
         servico["tot_trib"] = {"modo": "nao_informado"}
+    if g("valores/trib/tribFed/vRetIRRF"):
+        # A nota guarda o valor retido, não a alíquota: volta à alíquota pelo valor do serviço.
+        p_irrf = Decimal(g("valores/trib/tribFed/vRetIRRF")) * 100 / Decimal(g("valores/vServPrest/vServ"))
+        servico["irrf"] = {"p_aliq": str(p_irrf.quantize(Decimal("0.01")))}
     if tem_pis_cofins:
         servico["pis_cofins"] = {"cst": g(pc + "CST"), "p_aliq_pis": g(pc + "pAliqPis") or "0",
                                  "p_aliq_cofins": g(pc + "pAliqCofins") or "0"}

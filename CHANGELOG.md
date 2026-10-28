@@ -2,6 +2,14 @@
 
 Formato de [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões em [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.4.0] - 2026-10-28
+
+### Adicionado
+- IR retido pelo tomador (`servico.irrf`, classe `Irrf`): `vRetIRRF` = valor do serviço × alíquota, depois do
+  PIS/COFINS no grupo de tributos federais. Retenção de até R$ 10,00 é dispensada (Lei 9.430/1996, art. 67) e a
+  nota sai sem ela.
+- `nfse configurar modelo` lê o IRRF de uma nota anterior e devolve a alíquota.
+
 ## [0.3.0] - 2026-10-28
 
 ### Adicionado

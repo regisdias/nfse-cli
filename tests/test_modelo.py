@@ -1,4 +1,6 @@
 import zlib
+from dataclasses import replace
+from decimal import Decimal
 
 import pytest
 from lxml import etree
@@ -84,7 +86,7 @@ def test_pis_cofins_retido_nao_sabe_emitir(cfg_presumido, cert, emissao):
 
 
 @pytest.mark.parametrize("pai, filho, texto, esperado", [
-    ("valores/trib", "tribFed/vRetIRRF", "100.00", "tributos federais (retenções)"),
+    ("valores/trib", "tribFed/vRetCSLL", "100.00", "tributos federais (retenções)"),
     ("infDPS", "interm/CNPJ", "11444777000161", "intermediário do serviço"),
     ("valores", "vDedRed/vDR", "10.00", "dedução da base de cálculo"),
 ])
@@ -155,3 +157,14 @@ def test_tabelas():
     assert ("010101", "Análise e desenvolvimento de sistemas.") in tabelas.buscar_servicos("desenvolvimento de sistemas")
     assert tabelas.buscar_nbs("1.1401.39.00")[0][0] == "114013900"
     assert tabelas.buscar_servicos("xyzzy inexistente") == []
+
+
+def test_irrf_retido_ida_e_volta(cfg_presumido, cert, emissao):
+    import nfse
+
+    cfg = replace(cfg_presumido, servico=replace(cfg_presumido.servico, irrf=nfse.Irrf(p_aliq=Decimal("1.50"))))
+    nota = nfse_de(gerar_dps(cfg, cert, emissao, None).xml)
+    m = ler_nfse(nota)
+    assert m.nao_suportado == []
+    assert m.config["servico"]["irrf"] == {"p_aliq": "1.50"}
+    assert nfse.config_de_dict(m.config).servico.irrf.valor(Decimal("9000")) == Decimal("135.00")

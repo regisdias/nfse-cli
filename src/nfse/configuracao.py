@@ -5,6 +5,7 @@
   "servico": {"c_trib_nac", "c_nbs"?, "c_trib_mun"?, "cod_municipio_prestacao"?, "trib_issqn"?,
               "tp_ret_issqn"?, "p_aliq"?, "tot_trib": {"modo": "sn"|"percentual"|"valor"|"nao_informado", ...},
               "pis_cofins"?: {"p_aliq_pis", "p_aliq_cofins", "cst"?},
+              "irrf"?: {"p_aliq", "minimo"?},
               "ibs_cbs"?: {"cst", "c_class_trib", "c_ind_op", "ind_final"?}}
 }
 """
@@ -13,7 +14,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from .dps import DadosInvalidos, Endereco, IbsCbs, PisCofins, Prestador, Servico, Tomador, TotTrib
+from .dps import DadosInvalidos, Endereco, IbsCbs, Irrf, PisCofins, Prestador, Servico, Tomador, TotTrib
 from .emissao import Config
 
 
@@ -41,6 +42,13 @@ def pis_cofins_de_dict(d: dict) -> PisCofins:
         p_aliq_cofins=Decimal(str(_exigir(d, "p_aliq_cofins", "servico.pis_cofins"))),
         cst=str(d.get("cst", "01")),
     )
+
+
+def irrf_de_dict(d: dict) -> Irrf:
+    p_aliq = Decimal(str(_exigir(d, "p_aliq", "servico.irrf")))
+    if not 0 < p_aliq < 100:
+        raise DadosInvalidos(f"servico.irrf.p_aliq: alíquota em %, maior que 0 e menor que 100, veio {p_aliq}")
+    return Irrf(p_aliq=p_aliq, minimo=Decimal(str(d["minimo"])) if "minimo" in d else Irrf.minimo)
 
 
 def ibs_cbs_de_dict(d: dict) -> IbsCbs:
@@ -86,6 +94,7 @@ def config_de_dict(d: dict) -> Config:
         tp_ret_issqn=int(s.get("tp_ret_issqn", 1)),
         p_aliq=Decimal(str(s["p_aliq"])) if "p_aliq" in s else None,
         pis_cofins=pis_cofins_de_dict(s["pis_cofins"]) if s.get("pis_cofins") else None,
+        irrf=irrf_de_dict(s["irrf"]) if s.get("irrf") else None,
         ibs_cbs=ibs_cbs_de_dict(s["ibs_cbs"]) if s.get("ibs_cbs") else None,
     )
     return Config(prestador, servico)

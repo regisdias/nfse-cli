@@ -36,7 +36,7 @@ Confira antes de instalar. O que está em ❌ a configuração recusa com aviso,
 | **Regime da empresa** | Simples Nacional, ME ou EPP (testado em produção)<br>🟡 Lucro Presumido e Lucro Real sem retenções (a nota é montada e validada, mas ainda não foi testada em produção) | MEI |
 | **Cliente** | Empresa (CNPJ) ou pessoa (CPF) no Brasil<br>Nota sem cliente identificado | Cliente no exterior (exportação de serviço) |
 | **ISS** | Tributável e recolhido pela própria empresa, no município dela ou em outro | ISS retido pelo cliente<br>Imunidade, exportação, não incidência<br>Benefício municipal, exigibilidade suspensa |
-| **Tributos federais** | Sem retenção<br>🟡 PIS/COFINS de apuração própria (Lucro Presumido ou Real) | Retenção de IR, PIS, COFINS, CSLL ou INSS |
+| **Tributos federais** | Sem retenção<br>🟡 PIS/COFINS de apuração própria (Lucro Presumido ou Real)<br>🟡 IR retido pelo tomador, com a dispensa até R$ 10,00 | Retenção de PIS, COFINS, CSLL ou INSS |
 | **Reforma tributária** | Notas sem IBS/CBS, como as aceitas hoje<br>🟡 Grupo IBS/CBS com CST, classificação e indicador da operação (a Sefin calcula os valores) | Destinatário diferente do cliente, operação com ente governamental, reembolso e repasse, diferimento |
 | **Valores** | Valor do serviço e tributos aproximados (percentual do Simples, percentual ou valor) | Desconto, dedução da base de cálculo |
 | **O que faz com a nota** | Emitir, consultar, baixar o XML e gerar o PDF | Cancelar, substituir, registrar eventos |

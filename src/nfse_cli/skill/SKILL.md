@@ -96,7 +96,9 @@ deixe a pessoa escolher.
 4. **ISS.** O cliente retém o ISS? Se sim: ainda não suportado, pare. O serviço é prestado em outro município?
    Se sim, `cod_municipio_prestacao`. Simples ME/EPP sem retenção não informa alíquota (`p_aliq`); fora do
    Simples, pergunte a alíquota.
-5. **Retenções federais** (IR, PIS, COFINS, CSLL, INSS) pelo cliente? Se sim: ainda não suportado, pare.
+5. **Retenções federais** pelo cliente? IR retido é suportado: `irrf` com a alíquota da contabilidade
+   (`{"p_aliq": "1.50"}`); a retenção de até R$ 10,00 é dispensada sozinha (Lei 9.430/1996, art. 67). PIS,
+   COFINS, CSLL ou INSS retidos: ainda não suportado, pare.
    Fora do Simples, sem retenção: PIS/COFINS de apuração própria (`pis_cofins`, alíquotas da contabilidade:
    presumido 0,65 e 3,00; real 1,65 e 7,60) e o grupo IBS/CBS (`ibs_cbs`: CST, cClassTrib e indicador da
    operação). Os códigos de IBS/CBS vêm da contabilidade ou de uma nota do Emissor Web; não invente.

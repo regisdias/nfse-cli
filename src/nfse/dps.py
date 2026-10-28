@@ -112,6 +112,23 @@ class PisCofins:
 
 
 @dataclass(frozen=True)
+class Irrf:
+    """IRRF retido pelo tomador, à alíquota sobre o valor do serviço (ex.: 1,5% em agenciamento).
+
+    Retenção de valor igual ou inferior a ``minimo`` é dispensada (Lei 9.430/1996, art. 67: R$ 10,00): a nota
+    sai sem ``vRetIRRF``. Quem decide se o serviço tem IRRF é quem chama; aqui só se calcula.
+    """
+
+    p_aliq: Decimal
+    minimo: Decimal = Decimal("10.00")
+
+    def valor(self, base: Decimal | str) -> Decimal | None:
+        """Valor retido, em centavos; None quando a retenção é dispensada."""
+        v = (Decimal(base) * Decimal(self.p_aliq) / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        return v if v > Decimal(self.minimo) else None
+
+
+@dataclass(frozen=True)
 class IbsCbs:
     """Grupo IBS/CBS declarado pelo emitente (reforma tributária). A Sefin calcula base e valores."""
 
@@ -140,6 +157,7 @@ class Servico:
     p_aliq: Decimal | None = None
     """Alíquota do ISSQN. ME/EPP no SN sem retenção não informa (E0625)."""
     pis_cofins: PisCofins | None = None
+    irrf: Irrf | None = None
     ibs_cbs: IbsCbs | None = None
 
 
@@ -347,8 +365,13 @@ def montar_dps(prestador: Prestador, servico: Servico, tomador: Tomador | None, 
     _el(mun, "tpRetISSQN", str(servico.tp_ret_issqn))
     if servico.p_aliq is not None:
         _el(mun, "pAliq", dinheiro(servico.p_aliq))
-    if servico.pis_cofins:
-        _pis_cofins(_el(_el(trib, "tribFed"), "piscofins"), servico.pis_cofins, Decimal(emissao.valor))
+    v_irrf = servico.irrf.valor(emissao.valor) if servico.irrf else None
+    if servico.pis_cofins or v_irrf is not None:
+        fed = _el(trib, "tribFed")
+        if servico.pis_cofins:
+            _pis_cofins(_el(fed, "piscofins"), servico.pis_cofins, Decimal(emissao.valor))
+        if v_irrf is not None:
+            _el(fed, "vRetIRRF", dinheiro(v_irrf))  # depois do piscofins (TCTribFederal)
     _tot_trib(_el(trib, "totTrib"), servico.tot_trib, prestador)
     if servico.ibs_cbs:
         _ibs_cbs(_el(inf, "IBSCBS"), servico.ibs_cbs, leiaute)

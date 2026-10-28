@@ -58,6 +58,7 @@ respostas):
 | `tot_trib` | Tributos aproximados: `sn` (percentual do Simples), `percentual`, `valor` ou `nao_informado` | Contabilidade |
 | `p_aliq` | Alíquota do ISS; ME/EPP no Simples sem retenção não informa | Prefeitura ou contabilidade |
 | `pis_cofins` | Fora do Simples: `{"p_aliq_pis": "0.65", "p_aliq_cofins": "3.00", "cst": "01"}`. Base é o valor do serviço; PIS e COFINS são calculados. Sem retenção | Contabilidade (presumido 0,65 e 3,00; real 1,65 e 7,60) |
+| `irrf` | IR retido pelo tomador: `{"p_aliq": "1.50"}`. `vRetIRRF` = valor do serviço × alíquota; retenção de até R$ 10,00 é dispensada e a nota sai sem ela (Lei 9.430/1996, art. 67; o limite muda com `"minimo"`) | Contabilidade |
 | `ibs_cbs` | Reforma tributária: `{"cst": "000", "c_class_trib": "000001", "c_ind_op": "070101", "ind_final": 0}` (`ind_final` opcional). A Sefin calcula base e valores | Contabilidade ou uma nota do Emissor Web |
 
 ## Recorrência e entrega
