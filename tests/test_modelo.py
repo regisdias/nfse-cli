@@ -63,6 +63,26 @@ def test_o_que_volta_monta_a_mesma_dps(nota, cert, emissao):
     assert sem_hora(original) == sem_hora(refeita)
 
 
+def test_lucro_presumido_ida_e_volta(cfg_presumido, cert, emissao, tomador):
+    import nfse
+
+    nota = nfse_de(gerar_dps(cfg_presumido, cert, emissao, tomador).xml)
+    m = ler_nfse(nota)
+    assert m.nao_suportado == []
+    assert m.config["servico"]["pis_cofins"] == {"cst": "01", "p_aliq_pis": "0.65", "p_aliq_cofins": "3.00"}
+    assert m.config["servico"]["ibs_cbs"] == {"cst": "000", "c_class_trib": "000001", "c_ind_op": "070101"}
+    de_novo = gerar_dps(nfse.config_de_dict(m.config), cert, emissao, nfse.tomador_de_dict(m.tomador)).xml
+    sem_hora = lambda x: [(e.tag, e.text) for e in etree.fromstring(x).find(f".//{{{NS}}}infDPS").iter()  # noqa: E731
+                          if etree.QName(e).localname != "dhEmi"]
+    assert sem_hora(nota) == sem_hora(de_novo)
+
+
+def test_pis_cofins_retido_nao_sabe_emitir(cfg_presumido, cert, emissao):
+    raiz = etree.fromstring(nfse_de(gerar_dps(cfg_presumido, cert, emissao, None).xml))
+    raiz.find(f".//{{{NS}}}tpRetPisCofins").text = "1"
+    assert "PIS/COFINS/CSLL retidos" in ler_nfse(etree.tostring(raiz)).nao_suportado
+
+
 @pytest.mark.parametrize("pai, filho, texto, esperado", [
     ("valores/trib", "tribFed/vRetIRRF", "100.00", "tributos federais (retenções)"),
     ("infDPS", "interm/CNPJ", "11444777000161", "intermediário do serviço"),

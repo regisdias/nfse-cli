@@ -97,6 +97,9 @@ deixe a pessoa escolher.
    Se sim, `cod_municipio_prestacao`. Simples ME/EPP sem retenção não informa alíquota (`p_aliq`); fora do
    Simples, pergunte a alíquota.
 5. **Retenções federais** (IR, PIS, COFINS, CSLL, INSS) pelo cliente? Se sim: ainda não suportado, pare.
+   Fora do Simples, sem retenção: PIS/COFINS de apuração própria (`pis_cofins`, alíquotas da contabilidade:
+   presumido 0,65 e 3,00; real 1,65 e 7,60) e o grupo IBS/CBS (`ibs_cbs`: CST, cClassTrib e indicador da
+   operação). Os códigos de IBS/CBS vêm da contabilidade ou de uma nota do Emissor Web; não invente.
 6. **Tributos aproximados** (Lei 12.741): no Simples, o percentual efetivo do Simples
    (`{"modo": "sn", "percentual": "6.00"}`, confirmar com a contabilidade). Fora do Simples, percentuais
    federal, estadual e municipal, ou `nao_informado`.

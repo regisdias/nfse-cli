@@ -3,7 +3,9 @@
 {
   "prestador": {"cnpj", "cod_municipio", "op_simp_nac", "reg_ap_trib_sn"?, "reg_esp_trib"?, "im"?, "fone"?, "email"?},
   "servico": {"c_trib_nac", "c_nbs"?, "c_trib_mun"?, "cod_municipio_prestacao"?, "trib_issqn"?,
-              "tp_ret_issqn"?, "p_aliq"?, "tot_trib": {"modo": "sn"|"percentual"|"valor"|"nao_informado", ...}}
+              "tp_ret_issqn"?, "p_aliq"?, "tot_trib": {"modo": "sn"|"percentual"|"valor"|"nao_informado", ...},
+              "pis_cofins"?: {"p_aliq_pis", "p_aliq_cofins", "cst"?},
+              "ibs_cbs"?: {"cst", "c_class_trib", "c_ind_op", "ind_final"?}}
 }
 """
 
@@ -11,7 +13,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from .dps import DadosInvalidos, Endereco, Prestador, Servico, Tomador, TotTrib
+from .dps import DadosInvalidos, Endereco, IbsCbs, PisCofins, Prestador, Servico, Tomador, TotTrib
 from .emissao import Config
 
 
@@ -31,6 +33,23 @@ def tot_trib_de_dict(d: dict) -> TotTrib:
     if modo == "nao_informado":
         return TotTrib.nao_informado()
     raise DadosInvalidos(f"servico.tot_trib.modo desconhecido: {modo}")
+
+
+def pis_cofins_de_dict(d: dict) -> PisCofins:
+    return PisCofins(
+        p_aliq_pis=Decimal(str(_exigir(d, "p_aliq_pis", "servico.pis_cofins"))),
+        p_aliq_cofins=Decimal(str(_exigir(d, "p_aliq_cofins", "servico.pis_cofins"))),
+        cst=str(d.get("cst", "01")),
+    )
+
+
+def ibs_cbs_de_dict(d: dict) -> IbsCbs:
+    return IbsCbs(
+        cst=str(_exigir(d, "cst", "servico.ibs_cbs")),
+        c_class_trib=str(_exigir(d, "c_class_trib", "servico.ibs_cbs")),
+        c_ind_op=str(_exigir(d, "c_ind_op", "servico.ibs_cbs")),
+        ind_final=int(d["ind_final"]) if d.get("ind_final") is not None else None,
+    )
 
 
 def tomador_de_dict(d: dict) -> Tomador:
@@ -66,5 +85,7 @@ def config_de_dict(d: dict) -> Config:
         trib_issqn=int(s.get("trib_issqn", 1)),
         tp_ret_issqn=int(s.get("tp_ret_issqn", 1)),
         p_aliq=Decimal(str(s["p_aliq"])) if "p_aliq" in s else None,
+        pis_cofins=pis_cofins_de_dict(s["pis_cofins"]) if s.get("pis_cofins") else None,
+        ibs_cbs=ibs_cbs_de_dict(s["ibs_cbs"]) if s.get("ibs_cbs") else None,
     )
     return Config(prestador, servico)

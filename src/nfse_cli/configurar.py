@@ -346,6 +346,12 @@ def descrever(rascunho: dict) -> str:
     else:
         tot = "não informados"
     linhas.append(f"Tributos aproximados: {tot}")
+    if pc := s.get("pis_cofins"):
+        linhas.append(f"PIS/COFINS: apuração própria, CST {pc.get('cst', '01')}, PIS {str(pc.get('p_aliq_pis')).replace('.', ',')}%"
+                      f", COFINS {str(pc.get('p_aliq_cofins')).replace('.', ',')}%, sem retenção")
+    if ib := s.get("ibs_cbs"):
+        linhas.append(f"IBS/CBS:    CST {ib.get('cst')}, cClassTrib {ib.get('c_class_trib')}, "
+                      f"indicador da operação {ib.get('c_ind_op')} (valores calculados pela Sefin)")
     for apelido, tom in (rascunho.get("tomadores") or {}).items():
         doc = re.sub(r"\D", "", str(tom.get("documento", "")))
         doc_fmt = _doc(doc, None, None) if len(doc) == 14 else _doc(None, doc, None)

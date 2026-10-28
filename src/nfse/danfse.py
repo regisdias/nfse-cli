@@ -422,7 +422,9 @@ def _desenhar(f: _Folha, n: _Nota) -> None:
 
     # IBS/CBS (2.1.10)
     ib = "IBSCBS"
-    gib = "DPS/infDPS/IBSCBS/valores/trib/gIBSCBS"
+    gib = "DPS/infDPS/IBSCBS/valores/trib"
+    if not n(f"{gib}/CST"):  # até a NT 009, CST e cClassTrib ficavam dentro de gIBSCBS
+        gib += "/gIBSCBS"
     f.titulo_bloco(topo, "TRIBUTAÇÃO IBS/CBS")
     f.campo(COLUNAS[1], topo, "CST / cClassTrib", _juntar(n(f"{gib}/CST"), n(f"{gib}/cClassTrib")))
     mun_ibs = municipio(n(f"{ib}/cLocalidadeIncid"))

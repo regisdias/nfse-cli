@@ -53,6 +53,11 @@ def test_danfse_sem_tomador_e_descricao_longa(cfg, cert, emissao, ambiente):
     assert pdf.startswith(b"%PDF")
 
 
+def test_danfse_de_empresa_fora_do_simples(cfg_presumido, cert, emissao, tomador):
+    pdf = gerar_danfse(nfse_de_teste(gerar_dps(cfg_presumido, cert, emissao, tomador).xml))
+    assert pdf.startswith(b"%PDF")
+
+
 def test_xml_que_nao_e_nfse():
     with pytest.raises(ValueError, match="infNFSe"):
         gerar_danfse(b'<DPS xmlns="http://www.sped.fazenda.gov.br/nfse"/>')

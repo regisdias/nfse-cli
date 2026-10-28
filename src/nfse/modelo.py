@@ -34,11 +34,18 @@ SUPORTADOS = {
     "valores/trib/totTrib/pTotTrib/pTotTribMun",
     "valores/trib/totTrib/vTotTrib/vTotTribFed", "valores/trib/totTrib/vTotTrib/vTotTribEst",
     "valores/trib/totTrib/vTotTrib/vTotTribMun",
+    "valores/trib/tribFed/piscofins/CST", "valores/trib/tribFed/piscofins/vBCPisCofins",
+    "valores/trib/tribFed/piscofins/pAliqPis", "valores/trib/tribFed/piscofins/pAliqCofins",
+    "valores/trib/tribFed/piscofins/vPis", "valores/trib/tribFed/piscofins/vCofins",
+    "valores/trib/tribFed/piscofins/tpRetPisCofins",
+    "IBSCBS/finNFSe", "IBSCBS/indFinal", "IBSCBS/cIndOp", "IBSCBS/indDest",
+    "IBSCBS/valores/trib/gIBSCBS/CST", "IBSCBS/valores/trib/gIBSCBS/cClassTrib",  # até a NT 009
+    "IBSCBS/valores/trib/CST", "IBSCBS/valores/trib/cClassTrib",  # NT 009
 }
 
-# O Emissor Web informa PIS/COFINS mesmo sem nada a reter: CST 00 e tpRetPisCofins 0 ("não retidos").
-# A nota sai igual sem o grupo (a biblioteca não monta tribFed).
-IGNORADOS = {"valores/trib/tribFed/piscofins/CST": "00", "valores/trib/tribFed/piscofins/tpRetPisCofins": "0"}
+# O Emissor Web informa PIS/COFINS mesmo sem nada a apurar: CST 00 e tpRetPisCofins 0 ("não retidos").
+# A nota sai igual sem o grupo.
+SEM_PIS_COFINS = {"valores/trib/tribFed/piscofins/CST": "00", "valores/trib/tribFed/piscofins/tpRetPisCofins": "0"}
 
 # Prefixo do caminho -> o que é, em português, para a mensagem.
 NOMES = [
@@ -107,7 +114,7 @@ def ler_nfse(xml: bytes) -> Modelo:
 
     nao_suportado, avisos = [], []
     for caminho, valor in f.items():
-        if caminho in SUPORTADOS or IGNORADOS.get(caminho) == valor:
+        if caminho in SUPORTADOS:
             continue
         nome = _nome(caminho)
         if nome not in nao_suportado:
@@ -120,6 +127,14 @@ def ler_nfse(xml: bytes) -> Modelo:
         nao_suportado.append("ISS não tributável (imunidade, exportação ou não incidência)")
     if g("valores/trib/tribMun/tpRetISSQN") not in (None, "1"):
         nao_suportado.append("ISS retido pelo tomador")
+    pc = "valores/trib/tribFed/piscofins/"
+    tem_pis_cofins = g(pc + "CST") not in (None, SEM_PIS_COFINS[pc + "CST"])
+    if g(pc + "tpRetPisCofins") not in (None, "0"):
+        nao_suportado.append("PIS/COFINS/CSLL retidos")
+    if tem_pis_cofins and g(pc + "vBCPisCofins") not in (None, g("valores/vServPrest/vServ")):
+        nao_suportado.append("base do PIS/COFINS diferente do valor do serviço")
+    if g("IBSCBS/indDest") not in (None, "0"):
+        nao_suportado.append("destinatário diferente do tomador (IBS/CBS)")
     if g("prest/regTrib/opSimpNac") == "1":
         avisos.append("empresa fora do Simples: a biblioteca monta a nota, mas esse regime ainda não foi testado em produção")
     if g("valores/trib/totTrib/vTotTrib/vTotTribFed"):
@@ -159,6 +174,15 @@ def ler_nfse(xml: bytes) -> Modelo:
                                                    (("federal", "Fed"), ("estadual", "Est"), ("municipal", "Mun"))}}
     else:
         servico["tot_trib"] = {"modo": "nao_informado"}
+    if tem_pis_cofins:
+        servico["pis_cofins"] = {"cst": g(pc + "CST"), "p_aliq_pis": g(pc + "pAliqPis") or "0",
+                                 "p_aliq_cofins": g(pc + "pAliqCofins") or "0"}
+    ib = "IBSCBS/valores/trib/" if g("IBSCBS/valores/trib/CST") else "IBSCBS/valores/trib/gIBSCBS/"
+    if g(ib + "CST"):
+        servico["ibs_cbs"] = {"cst": g(ib + "CST"), "c_class_trib": g(ib + "cClassTrib"),
+                              "c_ind_op": g("IBSCBS/cIndOp")}
+        if g("IBSCBS/indFinal"):
+            servico["ibs_cbs"]["ind_final"] = int(g("IBSCBS/indFinal"))
 
     tomador = None
     if g("toma/xNome"):

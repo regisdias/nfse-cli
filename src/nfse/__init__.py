@@ -16,6 +16,8 @@ from .dps import (
     DadosInvalidos,
     Emissao,
     Endereco,
+    IbsCbs,
+    PisCofins,
     Prestador,
     Servico,
     Tomador,
@@ -29,14 +31,14 @@ from .emissao import Config, DpsAssinada, Resultado, emitir, gerar_dps
 from .esquema import EsquemaInvalido, validar_dps
 from .sefin import Erro, FalhaComunicacao, Rejeicao, Sefin
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 __all__ = [
     "HOMOLOGACAO", "PRODUCAO",
     "LEIAUTES", "LEIAUTE_ANTERIOR", "LEIAUTE_NT009", "LEIAUTE_POR_AMBIENTE",
     "AssinaturaInvalida", "CertificadoInvalido", "DanfseIndisponivel", "DadosInvalidos", "EsquemaInvalido",
     "FalhaComunicacao", "Rejeicao", "Erro",
-    "Certificado", "Config", "DpsAssinada", "Emissao", "Endereco", "Prestador",
+    "Certificado", "Config", "DpsAssinada", "Emissao", "Endereco", "IbsCbs", "PisCofins", "Prestador",
     "Resultado", "Sefin", "Servico", "Tomador", "TotTrib",
     "assinar", "config_de_dict", "emitir", "gerar_danfse", "gerar_dps", "id_dps", "montar_dps", "tomador_de_dict", "validar_dps", "verificar",
 ]

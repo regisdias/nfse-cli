@@ -8,7 +8,10 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import BestAvailableEncryption, pkcs12
 from cryptography.x509.oid import NameOID
 
-from nfse import HOMOLOGACAO, LEIAUTES, Certificado, Config, Emissao, Prestador, Servico, Tomador, TotTrib
+from dataclasses import replace
+
+from nfse import (HOMOLOGACAO, LEIAUTES, Certificado, Config, Emissao, IbsCbs, PisCofins, Prestador, Servico,
+                  Tomador, TotTrib)
 from nfse.certificado import OID_CNPJ
 
 CNPJ = "11222333000181"
@@ -69,6 +72,15 @@ def servico() -> Servico:
 @pytest.fixture
 def cfg(prestador, servico) -> Config:
     return Config(prestador, servico)
+
+
+@pytest.fixture
+def cfg_presumido(cfg) -> Config:
+    """Empresa fora do Simples (lucro presumido), com PIS/COFINS próprio e IBS/CBS."""
+    servico = replace(cfg.servico, tot_trib=TotTrib.percentual("11.33", "0", "3"), p_aliq=Decimal("3"),
+                      pis_cofins=PisCofins(p_aliq_pis=Decimal("0.65"), p_aliq_cofins=Decimal("3.00")),
+                      ibs_cbs=IbsCbs(cst="000", c_class_trib="000001", c_ind_op="070101"))
+    return Config(Prestador(cnpj=CNPJ, cod_municipio="3550308", op_simp_nac=1), servico)
 
 
 @pytest.fixture

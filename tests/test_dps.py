@@ -16,6 +16,8 @@ from nfse import (
     DadosInvalidos,
     Endereco,
     EsquemaInvalido,
+    IbsCbs,
+    PisCofins,
     Prestador,
     TotTrib,
     gerar_dps,
@@ -206,3 +208,45 @@ def test_leiaute_padrao_por_ambiente(emissao):
 def test_leiaute_desconhecido(prestador, servico, emissao):
     with pytest.raises(DadosInvalidos, match="leiaute"):
         montar_dps(prestador, servico, None, replace(emissao, leiaute="20990101"))
+
+
+# --- empresa fora do Simples (lucro presumido) ---------------------------------------
+
+def test_lucro_presumido_passa_no_xsd(cfg_presumido, cert, emissao, tomador):
+    xml = gerar_dps(cfg_presumido, cert, replace(emissao, valor=Decimal("180.00")), tomador).xml
+    validar_dps(xml, emissao.leiaute_efetivo)
+    r = etree.fromstring(xml)
+    pc = {etree.QName(e).localname: e.text for e in r.find(".//n:piscofins", {"n": NS})}
+    assert pc == {"CST": "01", "vBCPisCofins": "180.00", "pAliqPis": "0.65", "pAliqCofins": "3.00",
+                  "vPis": "1.17", "vCofins": "5.40", "tpRetPisCofins": "0"}
+    assert _ordem(xml, "n:infDPS/n:valores/n:trib") == ["tribMun", "tribFed", "totTrib"]
+    assert _ordem(xml, "n:infDPS")[-2:] == ["valores", "IBSCBS"]
+    ibs = _ordem(xml, "n:infDPS/n:IBSCBS")
+    if emissao.leiaute == LEIAUTE_NT009:
+        assert ibs == ["cIndOp", "indDest", "valores"]
+    else:
+        assert ibs == ["finNFSe", "cIndOp", "indDest", "valores"]
+    caminho = ".//n:IBSCBS/n:valores/n:trib/" + ("" if emissao.leiaute == LEIAUTE_NT009 else "n:gIBSCBS/")
+    assert r.findtext(caminho + "n:cClassTrib", namespaces={"n": NS}) == "000001"
+
+
+def test_pis_cofins_arredonda_para_centavos(cfg_presumido, cert, emissao):
+    xml = gerar_dps(cfg_presumido, cert, replace(emissao, valor=Decimal("157.33")), None).xml
+    r = etree.fromstring(xml)
+    assert r.findtext(".//n:vPis", namespaces={"n": NS}) == "1.02"
+    assert r.findtext(".//n:vCofins", namespaces={"n": NS}) == "4.72"
+
+
+def test_ibs_cbs_com_ind_final(cfg_presumido, cert, emissao):
+    ibs = replace(cfg_presumido.servico.ibs_cbs, ind_final=0)
+    cfg = replace(cfg_presumido, servico=replace(cfg_presumido.servico, ibs_cbs=ibs))
+    xml = gerar_dps(cfg, cert, emissao, None).xml
+    validar_dps(xml, emissao.leiaute_efetivo)
+    assert "indFinal" in _ordem(xml, "n:infDPS/n:IBSCBS")
+
+
+@pytest.mark.parametrize("campo, valor", [("cst", "00"), ("c_class_trib", "1"), ("c_ind_op", "abc")])
+def test_ibs_cbs_codigos_invalidos(cfg_presumido, emissao, campo, valor):
+    ibs = replace(cfg_presumido.servico.ibs_cbs, **{campo: valor})
+    with pytest.raises(DadosInvalidos, match="IBS/CBS"):
+        montar_dps(cfg_presumido.prestador, replace(cfg_presumido.servico, ibs_cbs=ibs), None, emissao)

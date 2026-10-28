@@ -98,6 +98,34 @@ class TotTrib:
 
 
 @dataclass(frozen=True)
+class PisCofins:
+    """PIS/COFINS de apuração própria, sem retenção (empresa fora do Simples).
+
+    Base = valor do serviço; vPis e vCofins saem das alíquotas (lucro presumido: 0,65 e 3,00;
+    lucro real: 1,65 e 7,60).
+    """
+
+    p_aliq_pis: Decimal
+    p_aliq_cofins: Decimal
+    cst: str = "01"
+    """01 tributável com alíquota básica; a tabela inteira está em TSTipoCST."""
+
+
+@dataclass(frozen=True)
+class IbsCbs:
+    """Grupo IBS/CBS declarado pelo emitente (reforma tributária). A Sefin calcula base e valores."""
+
+    cst: str
+    """3 dígitos (000 = tributação integral)."""
+    c_class_trib: str
+    """6 dígitos (000001 = situações tributadas integralmente)."""
+    c_ind_op: str
+    """Código indicador da operação, 6 dígitos (tabela do anexo de IBS/CBS)."""
+    ind_final: int | None = None
+    """Uso ou consumo pessoal: 0 não, 1 sim. None não informa."""
+
+
+@dataclass(frozen=True)
 class Servico:
     c_trib_nac: str
     """Código de tributação nacional, 6 dígitos (17.01.01 -> 170101)."""
@@ -111,6 +139,8 @@ class Servico:
     """1 não retido; 2 retido pelo tomador; 3 retido pelo intermediário."""
     p_aliq: Decimal | None = None
     """Alíquota do ISSQN. ME/EPP no SN sem retenção não informa (E0625)."""
+    pis_cofins: PisCofins | None = None
+    ibs_cbs: IbsCbs | None = None
 
 
 @dataclass(frozen=True)
@@ -317,9 +347,39 @@ def montar_dps(prestador: Prestador, servico: Servico, tomador: Tomador | None, 
     _el(mun, "tpRetISSQN", str(servico.tp_ret_issqn))
     if servico.p_aliq is not None:
         _el(mun, "pAliq", dinheiro(servico.p_aliq))
+    if servico.pis_cofins:
+        _pis_cofins(_el(_el(trib, "tribFed"), "piscofins"), servico.pis_cofins, Decimal(emissao.valor))
     _tot_trib(_el(trib, "totTrib"), servico.tot_trib, prestador)
+    if servico.ibs_cbs:
+        _ibs_cbs(_el(inf, "IBSCBS"), servico.ibs_cbs, leiaute)
 
     return dps
+
+
+def _pis_cofins(pc: etree._Element, t: PisCofins, base: Decimal) -> None:
+    cst = digitos(t.cst, "CST do PIS/COFINS", (2,))
+    _el(pc, "CST", cst)
+    _el(pc, "vBCPisCofins", dinheiro(base))
+    _el(pc, "pAliqPis", dinheiro(t.p_aliq_pis))
+    _el(pc, "pAliqCofins", dinheiro(t.p_aliq_cofins))
+    _el(pc, "vPis", dinheiro(base * Decimal(t.p_aliq_pis) / 100))
+    _el(pc, "vCofins", dinheiro(base * Decimal(t.p_aliq_cofins) / 100))
+    _el(pc, "tpRetPisCofins", "0")  # PIS/COFINS/CSLL não retidos
+
+
+def _ibs_cbs(g: etree._Element, t: IbsCbs, leiaute: str) -> None:
+    if leiaute == LEIAUTE_ANTERIOR:
+        _el(g, "finNFSe", "0")  # na NT 009 subiu para o infDPS
+    if t.ind_final is not None:
+        if t.ind_final not in (0, 1):
+            raise DadosInvalidos(f"indFinal do IBS/CBS: 0 ou 1, veio {t.ind_final}")
+        _el(g, "indFinal", str(t.ind_final))
+    _el(g, "cIndOp", digitos(t.c_ind_op, "cIndOp do IBS/CBS", (6,)))
+    _el(g, "indDest", "0")  # destinatário é o próprio tomador
+    trib = _el(_el(g, "valores"), "trib")
+    sit = _el(trib, "gIBSCBS") if leiaute == LEIAUTE_ANTERIOR else trib  # NT 009 subiu CST e cClassTrib
+    _el(sit, "CST", digitos(t.cst, "CST do IBS/CBS", (3,)))
+    _el(sit, "cClassTrib", digitos(t.c_class_trib, "cClassTrib do IBS/CBS", (6,)))
 
 
 def _tot_trib(tot: etree._Element, t: TotTrib, prestador: Prestador) -> None:

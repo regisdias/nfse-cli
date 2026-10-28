@@ -2,6 +2,18 @@
 
 Formato de [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/); versões em [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.3.0] - 2026-10-28
+
+### Adicionado
+- Empresa fora do Simples: PIS/COFINS de apuração própria, sem retenção (`servico.pis_cofins`, classe
+  `PisCofins`). A base é o valor do serviço; PIS e COFINS saem das alíquotas.
+- Grupo IBS/CBS (`servico.ibs_cbs`, classe `IbsCbs`): CST, classificação tributária e indicador da operação, nos
+  dois leiautes (antes e depois da NT 009). A Sefin calcula base e valores.
+- `nfse configurar modelo` lê os dois grupos de uma nota anterior.
+
+### Corrigido
+- DANFSe: CST e classificação do IBS/CBS não apareciam em notas do leiaute da NT 009.
+
 ## [0.2.1] - 2026-10-26
 
 ### Corrigido
